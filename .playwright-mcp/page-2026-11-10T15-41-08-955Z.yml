@@ -1,0 +1,52 @@
+- generic [ref=f3e3]:
+  - complementary [ref=f3e4]:
+    - generic [ref=f3e5]: py-ipfs-lite
+    - navigation [ref=f3e11]:
+      - link "Dashboard" [ref=f3e12] [cursor=pointer]:
+        - /url: /
+      - link "Files" [ref=f3e18] [cursor=pointer]:
+        - /url: /files
+      - link "Blocks" [ref=f3e23] [cursor=pointer]:
+        - /url: /blocks
+      - link "DAG" [ref=f3e27] [cursor=pointer]:
+        - /url: /dag
+      - link "Pins" [ref=f3e32] [cursor=pointer]:
+        - /url: /pins
+      - link "Swarm" [ref=f3e35] [cursor=pointer]:
+        - /url: /swarm
+      - link "PubSub" [ref=f3e40] [cursor=pointer]:
+        - /url: /pubsub
+      - link "Grafana" [ref=f3e44] [cursor=pointer]:
+        - /url: /grafana
+      - link "Metrics" [ref=f3e48] [cursor=pointer]:
+        - /url: /metrics
+      - link "Repo" [ref=f3e51] [cursor=pointer]:
+        - /url: /repo
+      - link "IPNS" [ref=f3e54] [cursor=pointer]:
+        - /url: /ipns
+      - link "Debug" [ref=f3e58] [cursor=pointer]:
+        - /url: /debug
+  - generic [ref=f3e69]:
+    - banner [ref=f3e70]:
+      - heading "DAG" [level=1] [ref=f3e71]
+      - status [ref=f3e72]:
+        - generic [ref=f3e74]: Disconnected
+    - main [ref=f3e75]:
+      - paragraph [ref=f3e76]: IPLD DAG node operations
+      - generic [ref=f3e77]:
+        - generic [ref=f3e78]:
+          - generic [ref=f3e79]: Put Node
+          - generic [ref=f3e85]:
+            - generic [ref=f3e86]:
+              - generic [ref=f3e87]: Codec
+              - combobox [ref=f3e88]:
+                - generic [ref=f3e89]: dag-json
+                - img [aria-hidden]: ▼
+              - textbox [aria-hidden] [ref=f3e90]: dag-json
+            - textbox "Enter JSON data..." [ref=f3e91]: "{ \"hello\": \"world\" }"
+            - button "Store Node" [ref=f3e92]
+        - generic [ref=f3e93]:
+          - generic [ref=f3e94]: Get Node
+          - generic [ref=f3e102]:
+            - textbox "Enter DAG CID..." [ref=f3e103]
+            - button [disabled]

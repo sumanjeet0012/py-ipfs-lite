@@ -1,0 +1,81 @@
+- generic [ref=f5e3]:
+  - complementary [ref=f5e4]:
+    - generic [ref=f5e5]: py-ipfs-lite
+    - navigation [ref=f5e11]:
+      - link "Dashboard" [ref=f5e12] [cursor=pointer]:
+        - /url: /
+      - link "Files" [ref=f5e18] [cursor=pointer]:
+        - /url: /files
+      - link "Blocks" [ref=f5e23] [cursor=pointer]:
+        - /url: /blocks
+      - link "DAG" [ref=f5e27] [cursor=pointer]:
+        - /url: /dag
+      - link "Pins" [ref=f5e32] [cursor=pointer]:
+        - /url: /pins
+      - link "Swarm" [ref=f5e35] [cursor=pointer]:
+        - /url: /swarm
+      - link "PubSub" [ref=f5e40] [cursor=pointer]:
+        - /url: /pubsub
+      - link "Grafana" [ref=f5e44] [cursor=pointer]:
+        - /url: /grafana
+      - link "Metrics" [ref=f5e48] [cursor=pointer]:
+        - /url: /metrics
+      - link "Repo" [ref=f5e51] [cursor=pointer]:
+        - /url: /repo
+      - link "IPNS" [ref=f5e54] [cursor=pointer]:
+        - /url: /ipns
+      - link "Debug" [ref=f5e58] [cursor=pointer]:
+        - /url: /debug
+  - generic [ref=f5e69]:
+    - banner [ref=f5e70]:
+      - heading "Swarm" [level=1] [ref=f5e71]
+      - status [ref=f5e72]:
+        - generic [ref=f5e74]: Disconnected
+    - main [ref=f5e75]:
+      - paragraph [ref=f5e76]: Active peer connections, connection age tiers, and network transport management
+      - generic [ref=f5e77]:
+        - generic [ref=f5e78]:
+          - generic [ref=f5e80] [cursor=pointer]:
+            - generic [ref=f5e81]: "> 30m Stable"
+            - generic [ref=f5e86]:
+              - generic [ref=f5e87]: "0"
+              - generic [ref=f5e88]: (0%)
+            - text: Long-lived backbone peers
+          - generic [ref=f5e90] [cursor=pointer]:
+            - generic [ref=f5e91]: 10m – 30m Peers
+            - generic [ref=f5e96]:
+              - generic [ref=f5e97]: "0"
+              - generic [ref=f5e98]: (0%)
+            - text: Extended active sessions
+          - generic [ref=f5e100] [cursor=pointer]:
+            - generic [ref=f5e101]: 5m – 10m Peers
+            - generic [ref=f5e106]:
+              - generic [ref=f5e107]: "0"
+              - generic [ref=f5e108]: (0%)
+            - text: Moderate duration peers
+          - generic [ref=f5e110] [cursor=pointer]:
+            - generic [ref=f5e111]: < 5m Cycling
+            - generic [ref=f5e118]:
+              - generic [ref=f5e119]: "0"
+              - generic [ref=f5e120]: (0%)
+            - text: DHT queries & new dials
+        - generic [ref=f5e121]:
+          - generic [ref=f5e122]: Connect to Peer
+          - generic [ref=f5e129]:
+            - textbox "/ip4/104.131.131.82/tcp/4001/p2p/QmaCp..." [ref=f5e130]
+            - button "Connect" [disabled]
+        - generic [ref=f5e133]:
+          - generic [ref=f5e134]: Connected Swarm Peers (0 of 0)
+          - generic [ref=f5e143]:
+            - textbox "Search peer ID..." [ref=f5e148]
+            - combobox [ref=f5e149]:
+              - option "All Ages" [selected]
+              - option "> 30m Stable (0)"
+              - option "10m–30m (0)"
+              - option "5m–10m (0)"
+              - option "< 5m (0)"
+            - combobox [ref=f5e150]:
+              - option "All Transports" [selected]
+              - option "QUIC-v1 (0)"
+              - option "TCP (0)"
+            - button "Refresh peers" [disabled]: Refresh

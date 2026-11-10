@@ -174,7 +174,13 @@ class BlockStoreAdapter:
     async def get(self, cid: bytes) -> bytes | None:
         return await self._store.get_block(cid)
 
-    async def has(self, cid: bytes) -> bool:
+    async def has(self, cid: Any) -> bool:
+        if hasattr(cid, "cid_bytes"):
+            return await self._store.has_block(cid.cid_bytes)
+        if isinstance(cid, str):
+            from libp2p.bitswap.cid import cid_to_bytes, parse_cid
+
+            return await self._store.has_block(cid_to_bytes(parse_cid(cid)))
         return await self._store.has_block(cid)
 
     async def delete(self, cid: bytes) -> None:

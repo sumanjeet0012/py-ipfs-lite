@@ -1,0 +1,35 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]: py-ipfs-lite
+    - navigation [ref=e11]:
+      - link "Dashboard" [ref=e12] [cursor=pointer]:
+        - /url: /
+      - link "Files" [ref=e18] [cursor=pointer]:
+        - /url: /files
+      - link "Blocks" [ref=e23] [cursor=pointer]:
+        - /url: /blocks
+      - link "DAG" [ref=e27] [cursor=pointer]:
+        - /url: /dag
+      - link "Pins" [ref=e32] [cursor=pointer]:
+        - /url: /pins
+      - link "Swarm" [ref=e35] [cursor=pointer]:
+        - /url: /swarm
+      - link "PubSub" [ref=e40] [cursor=pointer]:
+        - /url: /pubsub
+      - link "Grafana" [ref=e44] [cursor=pointer]:
+        - /url: /grafana
+      - link "Metrics" [ref=e48] [cursor=pointer]:
+        - /url: /metrics
+      - link "Repo" [ref=e51] [cursor=pointer]:
+        - /url: /repo
+      - link "IPNS" [ref=e54] [cursor=pointer]:
+        - /url: /ipns
+      - link "Debug" [ref=e58] [cursor=pointer]:
+        - /url: /debug
+  - generic [ref=e69]:
+    - banner [ref=e70]:
+      - heading "Dashboard" [level=1] [ref=e71]
+      - status [ref=e72]:
+        - generic [ref=e74]: Disconnected
+    - main [ref=e75]:
+      - paragraph [ref=e76]: Node overview and quick actions

@@ -1,0 +1,57 @@
+- generic [ref=f6e3]:
+  - complementary [ref=f6e4]:
+    - generic [ref=f6e5]: py-ipfs-lite
+    - navigation [ref=f6e11]:
+      - link "Dashboard" [ref=f6e12] [cursor=pointer]:
+        - /url: /
+      - link "Files" [ref=f6e18] [cursor=pointer]:
+        - /url: /files
+      - link "Blocks" [ref=f6e23] [cursor=pointer]:
+        - /url: /blocks
+      - link "DAG" [ref=f6e27] [cursor=pointer]:
+        - /url: /dag
+      - link "Pins" [ref=f6e32] [cursor=pointer]:
+        - /url: /pins
+      - link "Swarm" [ref=f6e35] [cursor=pointer]:
+        - /url: /swarm
+      - link "PubSub" [ref=f6e40] [cursor=pointer]:
+        - /url: /pubsub
+      - link "Grafana" [ref=f6e44] [cursor=pointer]:
+        - /url: /grafana
+      - link "Metrics" [ref=f6e48] [cursor=pointer]:
+        - /url: /metrics
+      - link "Repo" [ref=f6e51] [cursor=pointer]:
+        - /url: /repo
+      - link "IPNS" [ref=f6e54] [cursor=pointer]:
+        - /url: /ipns
+      - link "Debug" [ref=f6e58] [cursor=pointer]:
+        - /url: /debug
+  - generic [ref=f6e69]:
+    - banner [ref=f6e70]:
+      - heading "PubSub" [level=1] [ref=f6e71]
+      - status [ref=f6e72]:
+        - generic [ref=f6e74]: Disconnected
+    - main [ref=f6e75]:
+      - paragraph [ref=f6e76]: Subscribe to topics, watch live messages, and publish your own.
+      - generic [ref=f6e77]:
+        - generic [ref=f6e78]:
+          - generic [ref=f6e79]: Topic
+          - generic [ref=f6e88]:
+            - combobox [ref=f6e89]:
+              - generic [ref=f6e90]: Choose a known topic…
+              - img [aria-hidden]: ▼
+            - textbox [aria-hidden] [ref=f6e91]
+            - textbox "…or type a topic name" [ref=f6e92]
+            - button "Subscribe" [disabled]
+        - generic [ref=f6e93]:
+          - generic [ref=f6e95]:
+            - generic [ref=f6e96]: Messages
+            - generic [ref=f6e97]: 0 received
+          - paragraph [ref=f6e99]: Select or enter a topic above to start listening.
+        - generic [ref=f6e100]:
+          - generic [ref=f6e101]: Send message
+          - generic [ref=f6e103]:
+            - textbox "Subscribe to a topic first" [disabled] [ref=f6e104]
+            - generic [ref=f6e105]:
+              - generic [ref=f6e106]: ⌘/Ctrl+Enter to send
+              - button "Publish" [disabled]

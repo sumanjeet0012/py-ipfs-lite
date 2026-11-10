@@ -1,0 +1,381 @@
+- generic [ref=f14e3]:
+  - complementary [ref=f14e4]:
+    - generic [ref=f14e5]: py-ipfs-lite
+    - navigation [ref=f14e11]:
+      - link "Dashboard" [ref=f14e12] [cursor=pointer]:
+        - /url: /
+      - link "Files" [ref=f14e18] [cursor=pointer]:
+        - /url: /files
+      - link "Blocks" [ref=f14e23] [cursor=pointer]:
+        - /url: /blocks
+      - link "DAG" [ref=f14e27] [cursor=pointer]:
+        - /url: /dag
+      - link "Pins" [ref=f14e32] [cursor=pointer]:
+        - /url: /pins
+      - link "Swarm" [ref=f14e35] [cursor=pointer]:
+        - /url: /swarm
+      - link "PubSub" [ref=f14e40] [cursor=pointer]:
+        - /url: /pubsub
+      - link "Grafana" [ref=f14e44] [cursor=pointer]:
+        - /url: /grafana
+      - link "Metrics" [ref=f14e48] [cursor=pointer]:
+        - /url: /metrics
+      - link "Repo" [ref=f14e51] [cursor=pointer]:
+        - /url: /repo
+      - link "IPNS" [ref=f14e54] [cursor=pointer]:
+        - /url: /ipns
+      - link "Debug" [ref=f14e58] [cursor=pointer]:
+        - /url: /debug
+  - generic [ref=f14e69]:
+    - banner [ref=f14e70]:
+      - heading "Grafana" [level=1] [ref=f14e71]
+      - status [ref=f14e72]:
+        - generic [ref=f14e74]: Disconnected
+    - main [ref=f14e75]:
+      - paragraph [ref=f14e76]: Live Grafana-style observability for the py-ipfs-lite node — rates computed from Prometheus counters between scrapes
+      - generic [ref=f14e77]:
+        - generic [ref=f14e78]:
+          - generic [ref=f14e79]: Dashboards / Observability
+          - heading "py-ipfs-lite Node & libp2p Stack" [level=1] [ref=f14e80]
+        - generic [ref=f14e84]:
+          - combobox [ref=f14e85]:
+            - generic [ref=f14e86]: "0"
+            - img [aria-hidden]: ▼
+          - textbox [aria-hidden] [ref=f14e87]: "0"
+          - combobox [ref=f14e88]:
+            - generic [ref=f14e89]: "1"
+            - img [aria-hidden]: ▼
+          - textbox [aria-hidden] [ref=f14e90]: "1"
+          - generic [ref=f14e91]: Live
+      - generic [ref=f14e95]:
+        - generic [ref=f14e96]:
+          - button "System & Swarm" [ref=f14e97]
+          - generic [ref=f14e103]:
+            - generic [ref=f14e104]:
+              - generic [ref=f14e105]: Connected Peers
+              - generic [ref=f14e109]: —
+              - application [ref=f14e114]
+              - generic [ref=f14e115]: 0 samples in memory
+            - generic [ref=f14e116]:
+              - generic [ref=f14e117]: CPU Utilization
+              - generic [ref=f14e122]:
+                - generic [ref=f14e123]: —
+                - generic [ref=f14e124]: "%"
+              - application [ref=f14e128]
+              - generic [ref=f14e129]: — open fds
+            - generic [ref=f14e130]:
+              - generic [ref=f14e131]: Memory RSS
+              - generic [ref=f14e135]: —
+              - application [ref=f14e140]
+              - generic [ref=f14e141]: Physical memory of node process
+            - generic [ref=f14e142]:
+              - generic [ref=f14e143]: Uptime
+              - generic [ref=f14e147]: —
+              - application [ref=f14e152]
+              - generic [ref=f14e153]: Process uptime
+            - generic [ref=f14e154]:
+              - heading "Swarm peers & Kademlia routing table" [level=3] [ref=f14e157]
+              - generic [ref=f14e159]:
+                - generic [ref=f14e160]:
+                  - generic [ref=f14e161]: No data in range — collecting samples…
+                  - application [ref=f14e165]
+                - generic [ref=f14e169]:
+                  - generic [ref=f14e170]:
+                    - generic [ref=f14e172]: Connected peers
+                    - generic [ref=f14e173]: —
+                  - generic [ref=f14e174]:
+                    - generic [ref=f14e176]: Routing table
+                    - generic [ref=f14e177]: —
+            - generic [ref=f14e178]:
+              - heading "CPU & open file descriptors" [level=3] [ref=f14e181]
+              - generic [ref=f14e183]:
+                - generic [ref=f14e184]:
+                  - generic [ref=f14e185]: No data in range — collecting samples…
+                  - application [ref=f14e189]
+                - generic [ref=f14e193]:
+                  - generic [ref=f14e194]:
+                    - generic [ref=f14e196]: CPU
+                    - generic [ref=f14e197]: —
+                  - generic [ref=f14e198]:
+                    - generic [ref=f14e200]: Open FDs
+                    - generic [ref=f14e201]: —
+            - generic [ref=f14e202]:
+              - heading "Active streams & blockstore" [level=3] [ref=f14e205]
+              - generic [ref=f14e207]:
+                - generic [ref=f14e208]:
+                  - generic [ref=f14e209]: No data in range — collecting samples…
+                  - application [ref=f14e213]
+                - generic [ref=f14e217]:
+                  - generic [ref=f14e218]:
+                    - generic [ref=f14e220]: Active streams
+                    - generic [ref=f14e221]: —
+                  - generic [ref=f14e222]:
+                    - generic [ref=f14e224]: Blockstore blocks
+                    - generic [ref=f14e225]: —
+        - generic [ref=f14e226]:
+          - button "Transport & Security" [ref=f14e227]
+          - generic [ref=f14e234]:
+            - generic [ref=f14e235]:
+              - generic [ref=f14e236]:
+                - heading "Transport dial rate" [level=3] [ref=f14e238]
+                - generic [ref=f14e239]: successful dials per second by transport
+              - generic [ref=f14e241]:
+                - generic [ref=f14e242]:
+                  - generic [ref=f14e243]: No data in range — collecting samples…
+                  - application [ref=f14e247]
+                - generic [ref=f14e251]:
+                  - generic [ref=f14e252]:
+                    - generic [ref=f14e254]: tcp dials
+                    - generic [ref=f14e255]: —
+                  - generic [ref=f14e256]:
+                    - generic [ref=f14e258]: quic dials
+                    - generic [ref=f14e259]: —
+                  - generic [ref=f14e260]:
+                    - generic [ref=f14e262]: websocket dials
+                    - generic [ref=f14e263]: —
+            - generic [ref=f14e264]:
+              - generic [ref=f14e265]:
+                - heading "Dial failures" [level=3] [ref=f14e267]
+                - generic [ref=f14e268]: failed dials per second by transport
+              - generic [ref=f14e270]:
+                - generic [ref=f14e271]:
+                  - generic [ref=f14e272]: No data in range — collecting samples…
+                  - application [ref=f14e276]
+                - generic [ref=f14e280]:
+                  - generic [ref=f14e281]:
+                    - generic [ref=f14e283]: tcp failed
+                    - generic [ref=f14e284]: —
+                  - generic [ref=f14e285]:
+                    - generic [ref=f14e287]: quic failed
+                    - generic [ref=f14e288]: —
+                  - generic [ref=f14e289]:
+                    - generic [ref=f14e291]: websocket failed
+                    - generic [ref=f14e292]: —
+            - generic [ref=f14e293]:
+              - generic [ref=f14e294]:
+                - heading "Inbound connection rate" [level=3] [ref=f14e296]
+                - generic [ref=f14e297]: successful inbound connections per second
+              - generic [ref=f14e299]:
+                - generic [ref=f14e300]:
+                  - generic [ref=f14e301]: No data in range — collecting samples…
+                  - application [ref=f14e305]
+                - generic [ref=f14e309]:
+                  - generic [ref=f14e310]:
+                    - generic [ref=f14e312]: tcp inbound
+                    - generic [ref=f14e313]: —
+                  - generic [ref=f14e314]:
+                    - generic [ref=f14e316]: quic inbound
+                    - generic [ref=f14e317]: —
+                  - generic [ref=f14e318]:
+                    - generic [ref=f14e320]: websocket inbound
+                    - generic [ref=f14e321]: —
+            - generic [ref=f14e322]:
+              - generic [ref=f14e323]:
+                - heading "Security handshakes" [level=3] [ref=f14e325]
+                - generic [ref=f14e326]: noise / TLS handshake results per second
+              - generic [ref=f14e328]:
+                - generic [ref=f14e329]:
+                  - generic [ref=f14e330]: No data in range — collecting samples…
+                  - application [ref=f14e334]
+                - generic [ref=f14e338]:
+                  - generic [ref=f14e339]:
+                    - generic [ref=f14e341]: Handshake ok
+                    - generic [ref=f14e342]: —
+                  - generic [ref=f14e343]:
+                    - generic [ref=f14e345]: Handshake fail
+                    - generic [ref=f14e346]: —
+            - generic [ref=f14e347]:
+              - generic [ref=f14e348]:
+                - heading "Muxer stream lifecycle" [level=3] [ref=f14e350]
+                - generic [ref=f14e351]: streams opened vs closed per second
+              - generic [ref=f14e353]:
+                - generic [ref=f14e354]:
+                  - generic [ref=f14e355]: No data in range — collecting samples…
+                  - application [ref=f14e359]
+                - generic [ref=f14e363]:
+                  - generic [ref=f14e364]:
+                    - generic [ref=f14e366]: Opened
+                    - generic [ref=f14e367]: —
+                  - generic [ref=f14e368]:
+                    - generic [ref=f14e370]: Closed
+                    - generic [ref=f14e371]: —
+            - generic [ref=f14e372]:
+              - generic [ref=f14e373]:
+                - heading "Connection lifecycle" [level=3] [ref=f14e375]
+                - generic [ref=f14e376]: connections opened vs closed per second
+              - generic [ref=f14e378]:
+                - generic [ref=f14e379]:
+                  - generic [ref=f14e380]: No data in range — collecting samples…
+                  - application [ref=f14e384]
+                - generic [ref=f14e388]:
+                  - generic [ref=f14e389]:
+                    - generic [ref=f14e391]: Opened
+                    - generic [ref=f14e392]: —
+                  - generic [ref=f14e393]:
+                    - generic [ref=f14e395]: Closed
+                    - generic [ref=f14e396]: —
+        - generic [ref=f14e397]:
+          - button "DHT & Content Routing" [ref=f14e398]
+          - generic [ref=f14e406]:
+            - generic [ref=f14e407]:
+              - generic [ref=f14e408]: Avg Handshake Duration
+              - generic [ref=f14e413]: —
+              - application [ref=f14e418]
+            - generic [ref=f14e419]:
+              - generic [ref=f14e420]: Avg Lookup Duration
+              - generic [ref=f14e426]: —
+              - application [ref=f14e431]
+            - generic [ref=f14e432]:
+              - generic [ref=f14e433]: Ping RTT
+              - generic [ref=f14e438]: —
+              - application [ref=f14e443]
+            - generic [ref=f14e444]:
+              - generic [ref=f14e445]:
+                - heading "Kademlia operations" [level=3] [ref=f14e447]
+                - generic [ref=f14e448]: lookups, put/get value, provide, find providers per second
+              - generic [ref=f14e450]:
+                - generic [ref=f14e451]:
+                  - generic [ref=f14e452]: No data in range — collecting samples…
+                  - application [ref=f14e456]
+                - generic [ref=f14e460]:
+                  - generic [ref=f14e461]:
+                    - generic [ref=f14e463]: Lookups
+                    - generic [ref=f14e464]: —
+                  - generic [ref=f14e465]:
+                    - generic [ref=f14e467]: Put value
+                    - generic [ref=f14e468]: —
+                  - generic [ref=f14e469]:
+                    - generic [ref=f14e471]: Get value
+                    - generic [ref=f14e472]: —
+                  - generic [ref=f14e473]:
+                    - generic [ref=f14e475]: Provide
+                    - generic [ref=f14e476]: —
+                  - generic [ref=f14e477]:
+                    - generic [ref=f14e479]: Find providers
+                    - generic [ref=f14e480]: —
+                  - generic [ref=f14e481]:
+                    - generic [ref=f14e483]: Stream resets
+                    - generic [ref=f14e484]: —
+        - generic [ref=f14e485]:
+          - button "Bitswap & Data" [ref=f14e486]
+          - generic [ref=f14e492]:
+            - generic [ref=f14e493]:
+              - generic [ref=f14e494]:
+                - heading "Bitswap blocks" [level=3] [ref=f14e496]
+                - generic [ref=f14e497]: blocks sent vs received per second
+              - generic [ref=f14e499]:
+                - generic [ref=f14e500]:
+                  - generic [ref=f14e501]: No data in range — collecting samples…
+                  - application [ref=f14e505]
+                - generic [ref=f14e509]:
+                  - generic [ref=f14e510]:
+                    - generic [ref=f14e512]: Blocks sent
+                    - generic [ref=f14e513]: —
+                  - generic [ref=f14e514]:
+                    - generic [ref=f14e516]: Blocks received
+                    - generic [ref=f14e517]: —
+            - generic [ref=f14e518]:
+              - generic [ref=f14e519]:
+                - heading "Bitswap throughput" [level=3] [ref=f14e521]
+                - generic [ref=f14e522]: bytes sent vs received per second
+              - generic [ref=f14e524]:
+                - generic [ref=f14e525]:
+                  - generic [ref=f14e526]: No data in range — collecting samples…
+                  - application [ref=f14e530]
+                - generic [ref=f14e534]:
+                  - generic [ref=f14e535]:
+                    - generic [ref=f14e537]: Bytes sent
+                    - generic [ref=f14e538]: —
+                  - generic [ref=f14e539]:
+                    - generic [ref=f14e541]: Bytes received
+                    - generic [ref=f14e542]: —
+            - generic [ref=f14e543]:
+              - generic [ref=f14e544]:
+                - heading "Bitswap session activity" [level=3] [ref=f14e546]
+                - generic [ref=f14e547]: wantlist adds and active sessions
+              - generic [ref=f14e549]:
+                - generic [ref=f14e550]:
+                  - generic [ref=f14e551]: No data in range — collecting samples…
+                  - application [ref=f14e555]
+                - generic [ref=f14e559]:
+                  - generic [ref=f14e560]:
+                    - generic [ref=f14e562]: Wantlist adds
+                    - generic [ref=f14e563]: —
+                  - generic [ref=f14e564]:
+                    - generic [ref=f14e566]: Sessions
+                    - generic [ref=f14e567]: —
+            - generic [ref=f14e568]:
+              - generic [ref=f14e569]:
+                - heading "Messages & gossip" [level=3] [ref=f14e571]
+                - generic [ref=f14e572]: bitswap messages, gossipsub publish/receive per second
+              - generic [ref=f14e574]:
+                - generic [ref=f14e575]:
+                  - generic [ref=f14e576]: No data in range — collecting samples…
+                  - application [ref=f14e580]
+                - generic [ref=f14e584]:
+                  - generic [ref=f14e585]:
+                    - generic [ref=f14e587]: Messages sent
+                    - generic [ref=f14e588]: —
+                  - generic [ref=f14e589]:
+                    - generic [ref=f14e591]: Messages received
+                    - generic [ref=f14e592]: —
+            - generic [ref=f14e593]:
+              - generic [ref=f14e594]:
+                - heading "Gossipsub pub/sub" [level=3] [ref=f14e596]
+                - generic [ref=f14e597]: published vs received messages per second
+              - generic [ref=f14e599]:
+                - generic [ref=f14e600]:
+                  - generic [ref=f14e601]: No data in range — collecting samples…
+                  - application [ref=f14e605]
+                - generic [ref=f14e609]:
+                  - generic [ref=f14e610]:
+                    - generic [ref=f14e612]: Published
+                    - generic [ref=f14e613]: —
+                  - generic [ref=f14e614]:
+                    - generic [ref=f14e616]: Received
+                    - generic [ref=f14e617]: —
+            - generic [ref=f14e618]:
+              - generic [ref=f14e619]:
+                - heading "Discovery & bootstrap" [level=3] [ref=f14e621]
+                - generic [ref=f14e622]: peers discovered and bootstrap connects per second
+              - generic [ref=f14e624]:
+                - generic [ref=f14e625]:
+                  - generic [ref=f14e626]: No data in range — collecting samples…
+                  - application [ref=f14e630]
+                - generic [ref=f14e634]:
+                  - generic [ref=f14e635]:
+                    - generic [ref=f14e637]: Peers discovered
+                    - generic [ref=f14e638]: —
+                  - generic [ref=f14e639]:
+                    - generic [ref=f14e641]: Bootstrap connects
+                    - generic [ref=f14e642]: —
+            - generic [ref=f14e643]:
+              - generic [ref=f14e644]:
+                - heading "Identity exchange" [level=3] [ref=f14e646]
+                - generic [ref=f14e647]: identify rounds and push updates per second
+              - generic [ref=f14e649]:
+                - generic [ref=f14e650]:
+                  - generic [ref=f14e651]: No data in range — collecting samples…
+                  - application [ref=f14e655]
+                - generic [ref=f14e659]:
+                  - generic [ref=f14e660]:
+                    - generic [ref=f14e662]: Identify
+                    - generic [ref=f14e663]: —
+                  - generic [ref=f14e664]:
+                    - generic [ref=f14e666]: Identify push
+                    - generic [ref=f14e667]: —
+            - generic [ref=f14e668]:
+              - generic [ref=f14e669]:
+                - heading "Relay & ping activity" [level=3] [ref=f14e671]
+                - generic [ref=f14e672]: relay bytes forwarded and pings per second
+              - generic [ref=f14e674]:
+                - generic [ref=f14e675]:
+                  - generic [ref=f14e676]: No data in range — collecting samples…
+                  - application [ref=f14e680]
+                - generic [ref=f14e684]:
+                  - generic [ref=f14e685]:
+                    - generic [ref=f14e687]: Relay forwarded
+                    - generic [ref=f14e688]: —
+                  - generic [ref=f14e689]:
+                    - generic [ref=f14e691]: Pings
+                    - generic [ref=f14e692]: —

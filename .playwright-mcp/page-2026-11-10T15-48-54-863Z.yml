@@ -1,0 +1,412 @@
+- generic [ref=f12e3]:
+  - complementary [ref=f12e4]:
+    - generic [ref=f12e5]: py-ipfs-lite
+    - navigation [ref=f12e11]:
+      - link "Dashboard" [ref=f12e12] [cursor=pointer]:
+        - /url: /
+      - link "Files" [ref=f12e18] [cursor=pointer]:
+        - /url: /files
+      - link "Blocks" [ref=f12e23] [cursor=pointer]:
+        - /url: /blocks
+      - link "DAG" [ref=f12e27] [cursor=pointer]:
+        - /url: /dag
+      - link "Pins" [ref=f12e32] [cursor=pointer]:
+        - /url: /pins
+      - link "Swarm" [ref=f12e35] [cursor=pointer]:
+        - /url: /swarm
+      - link "PubSub" [ref=f12e40] [cursor=pointer]:
+        - /url: /pubsub
+      - link "Grafana" [ref=f12e44] [cursor=pointer]:
+        - /url: /grafana
+      - link "Metrics" [ref=f12e48] [cursor=pointer]:
+        - /url: /metrics
+      - link "Repo" [ref=f12e51] [cursor=pointer]:
+        - /url: /repo
+      - link "IPNS" [ref=f12e54] [cursor=pointer]:
+        - /url: /ipns
+      - link "Debug" [ref=f12e58] [cursor=pointer]:
+        - /url: /debug
+  - generic [ref=f12e69]:
+    - banner [ref=f12e70]:
+      - heading "Metrics & Observability" [level=1] [ref=f12e71]
+      - status [ref=f12e72]:
+        - generic [ref=f12e74]: Disconnected
+    - main [ref=f12e75]:
+      - paragraph [ref=f12e76]: Real-time Prometheus telemetry, swarm health, hardware performance, and stream metrics
+      - generic [ref=f12e77]:
+        - generic [ref=f12e79]:
+          - button "Overview Dashboard" [ref=f12e80]
+          - button "Prometheus Exposition (Raw)" [ref=f12e83]
+        - generic [ref=f12e89]:
+          - generic [ref=f12e90]:
+            - generic [ref=f12e91]: "Auto Refresh:"
+            - combobox [ref=f12e92]:
+              - option "Disabled"
+              - option "Every 2s"
+              - option "Every 5s" [selected]
+              - option "Every 10s"
+              - option "Every 30s"
+          - button "Refresh" [disabled]
+      - generic [ref=f12e93]:
+        - generic [ref=f12e94]:
+          - generic [ref=f12e96]:
+            - generic [ref=f12e97]: Connected Swarm Peers
+            - generic [ref=f12e103]:
+              - generic [ref=f12e104]: —
+              - generic [ref=f12e105]: / 300–500 range
+            - generic [ref=f12e106]:
+              - generic [ref=f12e107]: "Raw Conns: 0"
+              - generic [ref=f12e108]: Stabilizing
+          - generic [ref=f12e110]:
+            - generic [ref=f12e111]: Process CPU Utilization
+            - generic [ref=f12e116]:
+              - generic [ref=f12e117]: —
+              - generic [ref=f12e118]: High
+            - generic [ref=f12e119]:
+              - generic [ref=f12e120]: "Open FDs: 0"
+              - generic [ref=f12e121]: "PID: —"
+          - generic [ref=f12e123]:
+            - generic [ref=f12e124]: Physical Memory (RSS)
+            - generic [ref=f12e128]:
+              - generic [ref=f12e129]: —
+              - generic [ref=f12e130]: "(VMS: —)"
+            - generic [ref=f12e131]:
+              - generic [ref=f12e132]: "Heap Status: Stable"
+              - generic [ref=f12e133]: No Leaks
+          - generic [ref=f12e135]:
+            - generic [ref=f12e136]: Node Process Uptime
+            - generic [ref=f12e141]: —
+            - generic [ref=f12e143]:
+              - generic [ref=f12e144]: "Transport: Dual-Stack"
+              - generic [ref=f12e145]: TCP + QUIC
+        - generic [ref=f12e146]:
+          - generic [ref=f12e147]:
+            - generic [ref=f12e149]:
+              - generic [ref=f12e150]: Transport Dialing & Inbound Connections
+              - generic [ref=f12e156]: 100% success rate
+            - generic [ref=f12e157]:
+              - generic [ref=f12e158]:
+                - text: Dial attempts (lifetime)
+                - paragraph [ref=f12e160]: No dial events recorded yet.
+              - generic [ref=f12e161]:
+                - text: Inbound connections (lifetime)
+                - paragraph [ref=f12e163]: No inbound connection events recorded yet.
+          - generic [ref=f12e164]:
+            - generic [ref=f12e166]:
+              - generic [ref=f12e167]: Security Handshakes (Noise/TLS)
+              - generic [ref=f12e177]: 100% success rate
+            - generic [ref=f12e178]:
+              - generic [ref=f12e179]:
+                - generic [ref=f12e180]:
+                  - text: Successful
+                  - paragraph [ref=f12e181]: "0"
+                - generic [ref=f12e182]:
+                  - text: Failed
+                  - paragraph [ref=f12e183]: "0"
+                - generic [ref=f12e184]:
+                  - text: Avg Duration
+                  - paragraph [ref=f12e185]: —
+              - generic [ref=f12e186]:
+                - text: By protocol & direction
+                - paragraph [ref=f12e188]: No handshake events recorded yet.
+          - generic [ref=f12e189]:
+            - generic [ref=f12e190]: Stream Multiplexing (Muxers)
+            - generic [ref=f12e196]:
+              - generic [ref=f12e197]:
+                - text: Muxed connections by protocol
+                - paragraph [ref=f12e199]: No muxed connections yet.
+              - generic [ref=f12e200]:
+                - generic [ref=f12e201]:
+                  - generic [ref=f12e202]: Streams Opened
+                  - generic [ref=f12e207]:
+                    - generic [ref=f12e208]: "0"
+                    - generic [ref=f12e209]: outbound
+                  - paragraph [ref=f12e210]: "Inbound: 0"
+                - generic [ref=f12e211]:
+                  - generic [ref=f12e212]: Streams Closed
+                  - generic [ref=f12e217]:
+                    - generic [ref=f12e218]: "0"
+                    - generic [ref=f12e219]: outbound
+                  - paragraph [ref=f12e220]: "Inbound: 0"
+              - generic [ref=f12e221]:
+                - generic [ref=f12e222]: Muxer upgrade failures
+                - generic [ref=f12e223]: "0"
+          - generic [ref=f12e225]:
+            - generic [ref=f12e226]: Identity Exchange (Identify / Push)
+            - generic [ref=f12e231]:
+              - generic [ref=f12e232]:
+                - generic [ref=f12e233]:
+                  - text: Identify Rounds
+                  - generic [ref=f12e234]:
+                    - generic [ref=f12e235]: "0"
+                    - generic [ref=f12e236]: 100% success rate
+                  - paragraph [ref=f12e237]: "Failed: 0 · Node metadata exchanged on connect"
+                - generic [ref=f12e238]:
+                  - text: Identify Push Updates
+                  - generic [ref=f12e239]: "0"
+                  - paragraph [ref=f12e241]: "Failed: 0 · Address/record updates pushed to peers"
+              - generic [ref=f12e242]:
+                - generic [ref=f12e243]:
+                  - text: Connections Opened
+                  - paragraph [ref=f12e244]: "0"
+                - generic [ref=f12e245]:
+                  - text: Connections Closed
+                  - paragraph [ref=f12e246]: "0"
+        - generic [ref=f12e247]:
+          - generic [ref=f12e249]:
+            - generic [ref=f12e250]: Kademlia DHT & Content Routing
+            - generic [ref=f12e255]: "Routing table: — peers"
+          - generic [ref=f12e256]:
+            - generic [ref=f12e257]:
+              - generic [ref=f12e258]:
+                - text: Lookups
+                - paragraph [ref=f12e259]: "0"
+                - paragraph [ref=f12e260]: 0 ok · 0 failed
+              - generic [ref=f12e261]:
+                - text: Avg Lookup Duration
+                - paragraph [ref=f12e262]: —
+                - paragraph [ref=f12e263]: 0.0 peers found / lookup
+              - generic [ref=f12e264]:
+                - text: Put Value
+                - paragraph [ref=f12e265]: "0"
+                - paragraph [ref=f12e266]: 0 failures
+              - generic [ref=f12e267]:
+                - text: Get Value
+                - paragraph [ref=f12e268]: "0"
+                - paragraph [ref=f12e269]: 0 failures
+              - generic [ref=f12e270]:
+                - text: Provide
+                - paragraph [ref=f12e271]: "0"
+                - paragraph [ref=f12e272]: 0 peers announced
+              - generic [ref=f12e273]:
+                - text: Find Provider Queries
+                - paragraph [ref=f12e274]: "0"
+                - paragraph [ref=f12e275]: 0.0 providers found / query
+            - generic [ref=f12e276]: Inbound DHT requests served (by peers)
+            - generic [ref=f12e277]:
+              - generic [ref=f12e278]:
+                - text: Rate Limited
+                - paragraph [ref=f12e279]: "0"
+              - generic [ref=f12e280]:
+                - text: Record Validations
+                - paragraph [ref=f12e281]: "0"
+              - generic [ref=f12e282]:
+                - text: Table Refreshes
+                - paragraph [ref=f12e283]: "0"
+              - generic [ref=f12e284]:
+                - text: Record Republish
+                - paragraph [ref=f12e285]: "0"
+              - generic [ref=f12e286]:
+                - text: Stream Resets
+                - paragraph [ref=f12e287]: "0"
+              - generic [ref=f12e288]:
+                - text: Peers Queried / Lookup
+                - paragraph [ref=f12e289]: "0.0"
+        - generic [ref=f12e290]:
+          - generic [ref=f12e291]:
+            - generic [ref=f12e292]: Swarm Transport & Connection Lifecycle
+            - generic [ref=f12e300]:
+              - generic [ref=f12e301]:
+                - generic [ref=f12e302]:
+                  - text: Lifetime Connects
+                  - generic [ref=f12e303]: "0"
+                - generic [ref=f12e305]:
+                  - text: Lifetime Disconnects
+                  - generic [ref=f12e306]: "0"
+              - generic [ref=f12e308]:
+                - text: Disconnection Reason Hints
+                - paragraph [ref=f12e310]: No disconnection events recorded.
+          - generic [ref=f12e311]:
+            - generic [ref=f12e313]:
+              - generic [ref=f12e314]: Active Peer Connection Age Tiers
+              - generic [ref=f12e318]: —
+            - generic [ref=f12e319]:
+              - generic [ref=f12e320]:
+                - generic [ref=f12e321]:
+                  - text: "> 30m Stable"
+                  - paragraph [ref=f12e322]: "0"
+                - generic [ref=f12e323]:
+                  - text: "> 10m Extended"
+                  - paragraph [ref=f12e324]: "0"
+                - generic [ref=f12e325]:
+                  - text: "> 5m Active"
+                  - paragraph [ref=f12e326]: "0"
+              - paragraph [ref=f12e328]: Aggregating peer age distribution...
+        - generic [ref=f12e329]:
+          - generic [ref=f12e330]:
+            - generic [ref=f12e331]: Auto-Connector Watermarks & State
+            - generic [ref=f12e334]:
+              - generic [ref=f12e335]:
+                - generic [ref=f12e336]:
+                  - text: Low Watermark
+                  - paragraph [ref=f12e337]: "300"
+                - generic [ref=f12e338]:
+                  - text: High Watermark
+                  - paragraph [ref=f12e339]: "500"
+                - generic [ref=f12e340]:
+                  - text: In-Flight Dials
+                  - paragraph [ref=f12e341]: "0"
+                - generic [ref=f12e342]:
+                  - text: Min Connections
+                  - paragraph [ref=f12e343]: "300"
+                - generic [ref=f12e344]:
+                  - text: Max Cap
+                  - paragraph [ref=f12e345]: "550"
+                - generic [ref=f12e346]:
+                  - text: Dial Pacing
+                  - paragraph [ref=f12e347]: Single-Flight Guarded
+              - generic [ref=f12e348]: "Auto-Connector dial pacing is strictly guarded: re-entrancy locks prevent dial storms, capping CPU and memory."
+          - generic [ref=f12e353]:
+            - generic [ref=f12e354]: Multiplexed Streams & Direction Breakdown
+            - generic [ref=f12e360]:
+              - generic [ref=f12e361]:
+                - generic [ref=f12e362]:
+                  - generic [ref=f12e363]: Opened by Us (Initiator)
+                  - generic [ref=f12e368]:
+                    - generic [ref=f12e369]: "0"
+                    - generic [ref=f12e370]: active
+                  - paragraph [ref=f12e371]: "Total opened: 0"
+                - generic [ref=f12e372]:
+                  - generic [ref=f12e373]: Received by Us (Receiver)
+                  - generic [ref=f12e378]:
+                    - generic [ref=f12e379]: "0"
+                    - generic [ref=f12e380]: active
+                  - paragraph [ref=f12e381]: "Total received: 0"
+              - generic [ref=f12e382]:
+                - generic [ref=f12e383]:
+                  - text: Streams Opened Total
+                  - paragraph [ref=f12e384]: "0"
+                - generic [ref=f12e385]:
+                  - text: Streams Closed Total
+                  - paragraph [ref=f12e386]: "0"
+              - generic [ref=f12e387]:
+                - generic [ref=f12e388]:
+                  - generic [ref=f12e389]: Active Open Streams by Protocol
+                  - generic [ref=f12e390]: Live snapshot
+                - paragraph [ref=f12e392]: No long-lived open streams at snapshot (most close within 50ms).
+              - generic [ref=f12e393]:
+                - generic [ref=f12e394]:
+                  - generic [ref=f12e395]: Cumulative Streams by Protocol
+                  - generic [ref=f12e396]: Lifetime Total & Direction
+                - paragraph [ref=f12e398]: Protocol handshake negotiation in progress...
+        - generic [ref=f12e399]:
+          - generic [ref=f12e400]:
+            - generic [ref=f12e401]: Bitswap Protocol Telemetry
+            - generic [ref=f12e405]:
+              - generic [ref=f12e406]:
+                - generic [ref=f12e407]:
+                  - text: Wantlist Adds
+                  - paragraph [ref=f12e408]: "0"
+                  - paragraph [ref=f12e409]: 0 cancels
+                - generic [ref=f12e410]:
+                  - text: Active Sessions
+                  - paragraph [ref=f12e411]: "0"
+                - generic [ref=f12e412]:
+                  - text: Blocks Sent
+                  - paragraph [ref=f12e413]: "0"
+                - generic [ref=f12e414]:
+                  - text: Blocks Received
+                  - paragraph [ref=f12e415]: "0"
+                - generic [ref=f12e416]:
+                  - text: Messages Sent
+                  - paragraph [ref=f12e417]: "0"
+                - generic [ref=f12e418]:
+                  - text: Messages Received
+                  - paragraph [ref=f12e419]: "0"
+              - generic [ref=f12e420]:
+                - generic [ref=f12e421]: Provider queries
+                - generic [ref=f12e422]: 0 found / 0 total
+          - generic [ref=f12e423]:
+            - generic [ref=f12e424]: Peer Discovery
+            - generic [ref=f12e433]:
+              - generic [ref=f12e434]:
+                - generic [ref=f12e435]:
+                  - text: Peers Discovered
+                  - paragraph [ref=f12e436]: "0"
+                - generic [ref=f12e437]:
+                  - text: Peers Lost
+                  - paragraph [ref=f12e438]: "0"
+                - generic [ref=f12e439]:
+                  - text: Bootstrap Connects
+                  - paragraph [ref=f12e440]: "0"
+                - generic [ref=f12e441]:
+                  - text: Random Walk Cycles
+                  - paragraph [ref=f12e442]: "0"
+              - generic [ref=f12e443]: Random-walk refreshes the routing table periodically, discovering fresh peers without central bootstrappers.
+          - generic [ref=f12e452]:
+            - generic [ref=f12e453]: Ping & Latency
+            - generic [ref=f12e459]:
+              - generic [ref=f12e460]:
+                - text: Pings Sent
+                - paragraph [ref=f12e461]: "0"
+              - generic [ref=f12e462]:
+                - text: Avg RTT
+                - paragraph [ref=f12e463]: —
+              - generic [ref=f12e464]:
+                - text: Failures
+                - paragraph [ref=f12e465]: "0"
+          - generic [ref=f12e466]:
+            - generic [ref=f12e467]: Circuit Relay & Request/Response
+            - generic [ref=f12e473]:
+              - generic [ref=f12e474]:
+                - generic [ref=f12e475]:
+                  - text: Relay Reservations
+                  - paragraph [ref=f12e476]: "0"
+                - generic [ref=f12e477]:
+                  - text: Relay Hops
+                  - paragraph [ref=f12e478]: "0"
+                - generic [ref=f12e479]:
+                  - text: Data Forwarded
+                  - paragraph [ref=f12e480]: 0 B
+                  - paragraph [ref=f12e481]: via relay
+                - generic [ref=f12e482]:
+                  - text: Requests Served
+                  - paragraph [ref=f12e483]: "0"
+              - generic [ref=f12e484]: Request/response protocol powers latency-measured exchanges; relay support lets the node serve traffic for peers without public addresses.
+          - generic [ref=f12e489]:
+            - generic [ref=f12e490]: Gossipsub PubSub
+            - generic [ref=f12e496]:
+              - generic [ref=f12e497]:
+                - text: Messages Published
+                - paragraph [ref=f12e498]: "0"
+              - generic [ref=f12e499]:
+                - text: Messages Received
+                - paragraph [ref=f12e500]: "0"
+              - generic [ref=f12e501]:
+                - text: Subscription Changes
+                - paragraph [ref=f12e502]: "0"
+              - generic [ref=f12e503]:
+                - text: Control Messages
+                - paragraph [ref=f12e504]: "0"
+                - paragraph [ref=f12e505]: 0 sub-options
+        - generic [ref=f12e506]:
+          - generic [ref=f12e507]:
+            - generic [ref=f12e508]: BlockStore & Garbage Collection
+            - generic [ref=f12e513]:
+              - generic [ref=f12e514]:
+                - text: Total Blocks Stored
+                - paragraph [ref=f12e515]: "0"
+              - generic [ref=f12e516]:
+                - text: Blockstore Size
+                - paragraph [ref=f12e517]: 0 B
+              - generic [ref=f12e518]:
+                - text: GC Runs
+                - paragraph [ref=f12e519]: "0"
+              - generic [ref=f12e520]:
+                - text: Reclaimed Blocks
+                - paragraph [ref=f12e521]: "0"
+          - generic [ref=f12e522]:
+            - generic [ref=f12e523]: Bitswap Exchange Telemetry
+            - generic [ref=f12e528]:
+              - generic [ref=f12e529]:
+                - text: Bytes Sent
+                - paragraph [ref=f12e530]: 0 B
+              - generic [ref=f12e531]:
+                - text: Bytes Received
+                - paragraph [ref=f12e532]: 0 B
+              - generic [ref=f12e533]:
+                - text: Messages Sent
+                - paragraph [ref=f12e534]: "0"
+              - generic [ref=f12e535]:
+                - text: Messages Received
+                - paragraph [ref=f12e536]: "0"

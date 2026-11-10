@@ -115,6 +115,10 @@ class Peer(
     def block_service(self) -> Any:
         return self.dag_service
 
+    async def stop(self) -> None:
+        """Alias for :meth:`close`."""
+        await self.close()
+
     def _ensure_started(self) -> None:
         if not self._started:
             raise PeerNotStartedError("Peer not started. Call start() first.")

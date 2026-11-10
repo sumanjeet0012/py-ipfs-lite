@@ -131,6 +131,18 @@ class IPLDNode:
     def __hash__(self) -> int:
         return hash(self._cid_str)
 
+    def __len__(self) -> int:
+        return len(self._cid_str)
+
+    def __getitem__(self, item: Any) -> Any:
+        return self._cid_str[item]
+
+    def startswith(self, prefix: str | tuple[str, ...], *args: Any) -> bool:
+        return self._cid_str.startswith(prefix, *args)
+
+    def endswith(self, suffix: str | tuple[str, ...], *args: Any) -> bool:
+        return self._cid_str.endswith(suffix, *args)
+
     def raw_data(self) -> bytes | None:
         return self._data
 

@@ -44,8 +44,8 @@ async def main():
     print(f"  Blocks retained:  {stats.retained_blocks}")
 
     print("\nVerifying block presence on disk...")
-    keep_present = await peer.blockstore.has(parse_cid(cid_keep))
-    drop_present = await peer.blockstore.has(parse_cid(cid_drop))
+    keep_present = await peer.has_block(cid_keep)
+    drop_present = await peer.has_block(cid_drop)
 
     print(f"Pinned block still present:   {keep_present}")
     print(f"Unpinned block still present: {drop_present}")

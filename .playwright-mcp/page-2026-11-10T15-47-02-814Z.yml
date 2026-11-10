@@ -1,0 +1,51 @@
+- generic [ref=f11e3]:
+  - complementary [ref=f11e4]:
+    - generic [ref=f11e5]: py-ipfs-lite
+    - navigation [ref=f11e11]:
+      - link "Dashboard" [ref=f11e12] [cursor=pointer]:
+        - /url: /
+      - link "Files" [ref=f11e18] [cursor=pointer]:
+        - /url: /files
+      - link "Blocks" [ref=f11e23] [cursor=pointer]:
+        - /url: /blocks
+      - link "DAG" [ref=f11e27] [cursor=pointer]:
+        - /url: /dag
+      - link "Pins" [ref=f11e32] [cursor=pointer]:
+        - /url: /pins
+      - link "Swarm" [ref=f11e35] [cursor=pointer]:
+        - /url: /swarm
+      - link "PubSub" [ref=f11e40] [cursor=pointer]:
+        - /url: /pubsub
+      - link "Grafana" [ref=f11e44] [cursor=pointer]:
+        - /url: /grafana
+      - link "Metrics" [ref=f11e48] [cursor=pointer]:
+        - /url: /metrics
+      - link "Repo" [ref=f11e51] [cursor=pointer]:
+        - /url: /repo
+      - link "IPNS" [ref=f11e54] [cursor=pointer]:
+        - /url: /ipns
+      - link "Debug" [ref=f11e58] [cursor=pointer]:
+        - /url: /debug
+  - generic [ref=f11e69]:
+    - banner [ref=f11e70]:
+      - heading "Debug" [level=1] [ref=f11e71]
+      - status [ref=f11e72]:
+        - generic [ref=f11e74]: Disconnected
+    - main [ref=f11e75]:
+      - paragraph [ref=f11e76]: Peerstore, routing table, and diagnostics
+      - generic [ref=f11e77]:
+        - generic [ref=f11e78]:
+          - generic [ref=f11e80]:
+            - generic [ref=f11e81]: Peerstore (0)
+            - button "Refresh peerstore" [disabled]: Refresh
+          - paragraph [ref=f11e83]: Loading...
+        - generic [ref=f11e84]:
+          - generic [ref=f11e86]:
+            - generic [ref=f11e87]: Routing Table (0)
+            - button "Refresh routing table" [disabled]: Refresh
+          - paragraph [ref=f11e89]: Loading...
+        - generic [ref=f11e90]:
+          - generic [ref=f11e92]:
+            - generic [ref=f11e93]: Connection Stats
+            - button "Refresh connection stats" [disabled]: Refresh
+          - paragraph [ref=f11e95]: Loading...

@@ -144,7 +144,7 @@ class MaintenanceMixin:
         # Reuse a single PingService so streams are cached and reused
         # across ping cycles (avoids opening a new /ipfs/ping/1.0.0
         # stream for every single ping).
-        if self._ping_service is None:
+        if getattr(self, "_ping_service", None) is None:
             self._ping_service = PingService(cast(IHost, raw_host))
         ping_service = self._ping_service
 

@@ -1,0 +1,47 @@
+- generic [ref=f2e3]:
+  - complementary [ref=f2e4]:
+    - generic [ref=f2e5]: py-ipfs-lite
+    - navigation [ref=f2e11]:
+      - link "Dashboard" [ref=f2e12] [cursor=pointer]:
+        - /url: /
+      - link "Files" [ref=f2e18] [cursor=pointer]:
+        - /url: /files
+      - link "Blocks" [ref=f2e23] [cursor=pointer]:
+        - /url: /blocks
+      - link "DAG" [ref=f2e27] [cursor=pointer]:
+        - /url: /dag
+      - link "Pins" [ref=f2e32] [cursor=pointer]:
+        - /url: /pins
+      - link "Swarm" [ref=f2e35] [cursor=pointer]:
+        - /url: /swarm
+      - link "PubSub" [ref=f2e40] [cursor=pointer]:
+        - /url: /pubsub
+      - link "Grafana" [ref=f2e44] [cursor=pointer]:
+        - /url: /grafana
+      - link "Metrics" [ref=f2e48] [cursor=pointer]:
+        - /url: /metrics
+      - link "Repo" [ref=f2e51] [cursor=pointer]:
+        - /url: /repo
+      - link "IPNS" [ref=f2e54] [cursor=pointer]:
+        - /url: /ipns
+      - link "Debug" [ref=f2e58] [cursor=pointer]:
+        - /url: /debug
+  - generic [ref=f2e69]:
+    - banner [ref=f2e70]:
+      - heading "Blocks" [level=1] [ref=f2e71]
+      - status [ref=f2e72]:
+        - generic [ref=f2e74]: Disconnected
+    - main [ref=f2e75]:
+      - paragraph [ref=f2e76]: Raw block operations
+      - generic [ref=f2e77]:
+        - tablist [ref=f2e78]:
+          - tab "Stat" [selected] [ref=f2e79]
+          - tab "Get" [ref=f2e80]
+          - tab "Put" [ref=f2e81]
+          - tab "Remove" [ref=f2e82]
+        - tabpanel "Stat" [ref=f2e83]:
+          - generic [ref=f2e84]:
+            - generic [ref=f2e85]: Block Stat
+            - generic [ref=f2e89]:
+              - textbox "Enter block CID..." [ref=f2e90]
+              - button [disabled]

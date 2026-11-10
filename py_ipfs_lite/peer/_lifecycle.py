@@ -266,28 +266,34 @@ class LifecycleMixin:
         is_running = self._state == PeerState.RUNNING
         self._state = PeerState.STOPPING
 
-        try:
-            # Close exit_stack FIRST (stops pubsub services gracefully)
-            try:
-                await self._exit_stack.aclose()
-            except Exception as e:
-                logger.debug(f"Error closing exit stack: {e}")
+        with trio.CancelScope(shield=True):
+            if is_running:
+                try:
+                    await self.reprovider.stop()
+                except Exception as e:
+                    logger.debug(f"Error stopping reprovider: {e}")
 
-            # THEN cancel nursery (stops keepalive, stream monitor, etc.)
+                if self._exchange:
+                    try:
+                        await self._exchange.stop()  # type: ignore[union-attr]
+                    except Exception as e:
+                        logger.debug(f"Error stopping exchange: {e}")
+
+                if self.routing and hasattr(self.routing, "close"):
+                    try:
+                        await self.routing.close()
+                    except Exception as e:
+                        logger.debug(f"Error closing routing: {e}")
+
+                self._pubsub_subscriptions.clear()
+
             if hasattr(self, "_nursery") and self._nursery:
                 self._nursery.cancel_scope.cancel()
 
-            if is_running:
-                await self.reprovider.stop()
-                if self._exchange:
-                    await self._exchange.stop()  # type: ignore[union-attr]
-
-                if self.routing and hasattr(self.routing, "close"):
-                    await self.routing.close()
-
-                self._pubsub_subscriptions.clear()
-        finally:
-            self._state = PeerState.STOPPED
+            try:
+                await self._exit_stack.aclose()
+            except Exception as e:
+                logger.debug(f"Deferred nursery exception during close: {e}")
             self._state = PeerState.STOPPED
 
     async def bootstrap(self, peers: list[str] | list[Any]) -> None:

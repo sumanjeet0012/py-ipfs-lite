@@ -58,12 +58,16 @@ async def main():
                 ["ipfs", "swarm", "connect", py_addr],
                 capture_stdout=True,
                 capture_stderr=True,
+                check=False,
             )
             if res.returncode == 0:
                 print("Automatically connected local Kubo daemon to Python peer!")
                 print("Fetching CID from Python peer using Kubo...")
                 cat_res = await trio.run_process(
-                    ["ipfs", "cat", py_cid], capture_stdout=True, capture_stderr=True
+                    ["ipfs", "cat", py_cid],
+                    capture_stdout=True,
+                    capture_stderr=True,
+                    check=False,
                 )
                 print(f"Kubo fetched content: {cat_res.stdout.decode('utf-8').strip()}")
 
@@ -76,6 +80,7 @@ async def main():
                     ["ipfs", "add", "-Q", f2_path],
                     capture_stdout=True,
                     capture_stderr=True,
+                    check=False,
                 )
                 kubo_cid = add_res.stdout.decode("utf-8").strip()
                 print(f"Kubo added CID: {kubo_cid}")

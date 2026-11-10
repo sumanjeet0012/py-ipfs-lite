@@ -6,6 +6,6 @@ The API is organised as domain routers under
 FastAPI ``app`` (and ``create_app`` for custom builds).
 """
 
-from py_ipfs_lite.api.main import app, create_app
+from py_ipfs_lite.api.main import app, create_app, lifespan
 
-__all__ = ["app", "create_app"]
+__all__ = ["app", "create_app", "lifespan"]

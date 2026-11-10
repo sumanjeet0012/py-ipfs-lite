@@ -1,0 +1,44 @@
+- generic [ref=f9e3]:
+  - complementary [ref=f9e4]:
+    - generic [ref=f9e5]: py-ipfs-lite
+    - navigation [ref=f9e11]:
+      - link "Dashboard" [ref=f9e12] [cursor=pointer]:
+        - /url: /
+      - link "Files" [ref=f9e18] [cursor=pointer]:
+        - /url: /files
+      - link "Blocks" [ref=f9e23] [cursor=pointer]:
+        - /url: /blocks
+      - link "DAG" [ref=f9e27] [cursor=pointer]:
+        - /url: /dag
+      - link "Pins" [ref=f9e32] [cursor=pointer]:
+        - /url: /pins
+      - link "Swarm" [ref=f9e35] [cursor=pointer]:
+        - /url: /swarm
+      - link "PubSub" [ref=f9e40] [cursor=pointer]:
+        - /url: /pubsub
+      - link "Grafana" [ref=f9e44] [cursor=pointer]:
+        - /url: /grafana
+      - link "Metrics" [ref=f9e48] [cursor=pointer]:
+        - /url: /metrics
+      - link "Repo" [ref=f9e51] [cursor=pointer]:
+        - /url: /repo
+      - link "IPNS" [ref=f9e54] [cursor=pointer]:
+        - /url: /ipns
+      - link "Debug" [ref=f9e58] [cursor=pointer]:
+        - /url: /debug
+  - generic [ref=f9e69]:
+    - banner [ref=f9e70]:
+      - heading "Repo" [level=1] [ref=f9e71]
+      - status [ref=f9e72]:
+        - generic [ref=f9e74]: Disconnected
+    - main [ref=f9e75]:
+      - paragraph [ref=f9e76]: Repository statistics and management
+      - generic [ref=f9e77]:
+        - generic [ref=f9e78]:
+          - generic [ref=f9e80]:
+            - generic [ref=f9e81]: Local References
+            - button "Refresh refs" [disabled]: Refresh
+          - paragraph [ref=f9e83]: No references found.
+        - generic [ref=f9e84]:
+          - generic [ref=f9e85]: Garbage Collection
+          - button "Run GC" [ref=f9e88]

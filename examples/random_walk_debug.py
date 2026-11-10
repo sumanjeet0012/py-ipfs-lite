@@ -135,9 +135,8 @@ async def main():
 
         try:
             await trio.sleep_forever()
-        except trio.Cancelled:
-            pass
         finally:
+            nursery.cancel_scope.cancel()
             await peer.stop()
 
 

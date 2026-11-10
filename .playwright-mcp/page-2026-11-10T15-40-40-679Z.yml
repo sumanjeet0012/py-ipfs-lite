@@ -1,0 +1,46 @@
+- generic [ref=f1e3]:
+  - complementary [ref=f1e4]:
+    - generic [ref=f1e5]: py-ipfs-lite
+    - navigation [ref=f1e11]:
+      - link "Dashboard" [ref=f1e12] [cursor=pointer]:
+        - /url: /
+      - link "Files" [ref=f1e18] [cursor=pointer]:
+        - /url: /files
+      - link "Blocks" [ref=f1e23] [cursor=pointer]:
+        - /url: /blocks
+      - link "DAG" [ref=f1e27] [cursor=pointer]:
+        - /url: /dag
+      - link "Pins" [ref=f1e32] [cursor=pointer]:
+        - /url: /pins
+      - link "Swarm" [ref=f1e35] [cursor=pointer]:
+        - /url: /swarm
+      - link "PubSub" [ref=f1e40] [cursor=pointer]:
+        - /url: /pubsub
+      - link "Grafana" [ref=f1e44] [cursor=pointer]:
+        - /url: /grafana
+      - link "Metrics" [ref=f1e48] [cursor=pointer]:
+        - /url: /metrics
+      - link "Repo" [ref=f1e51] [cursor=pointer]:
+        - /url: /repo
+      - link "IPNS" [ref=f1e54] [cursor=pointer]:
+        - /url: /ipns
+      - link "Debug" [ref=f1e58] [cursor=pointer]:
+        - /url: /debug
+  - generic [ref=f1e69]:
+    - banner [ref=f1e70]:
+      - heading "Files" [level=1] [ref=f1e71]
+      - status [ref=f1e72]:
+        - generic [ref=f1e74]: Disconnected
+    - main [ref=f1e75]:
+      - paragraph [ref=f1e76]: Add and retrieve files
+      - generic [ref=f1e77]:
+        - generic [ref=f1e78]:
+          - generic [ref=f1e79]: Add File
+          - generic [ref=f1e87] [cursor=pointer]:
+            - button "file upload"
+            - paragraph [ref=f1e91]: Drag & drop a file, or click to select
+        - generic [ref=f1e92]:
+          - generic [ref=f1e93]: Fetch File (Cat)
+          - generic [ref=f1e102]:
+            - textbox "Enter CID to fetch..." [ref=f1e103]
+            - button [disabled]

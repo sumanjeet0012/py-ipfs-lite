@@ -13,7 +13,7 @@ async def main():
     # But wait, we need to populate it.
 
     # Just print the logic
-    pass
+    await peer.close()
 
 
 if __name__ == "__main__":

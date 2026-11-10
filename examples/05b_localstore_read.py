@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 
 import trio
@@ -12,10 +13,15 @@ logging.getLogger("py_ipfs_lite.reprovider").setLevel(logging.WARNING)
 async def main(cid: str):
     print("Demo 5b: Reading data from disk (persistence test)")
 
+    demo_dir = os.environ.get(
+        "IPFS_DEMO_BLOCKSTORE",
+        os.path.join(os.path.dirname(__file__), "demo_blocks"),
+    )
+
     print("\nStarting an IPFS Peer (Reader)...")
     config = Config(
         blockstore_type="filesystem",
-        blockstore_path="./demo_blocks",
+        blockstore_path=demo_dir,
         reprovide_interval_seconds=-1,
     )
     peer = Peer(config, listen_addrs=["/ip4/127.0.0.1/tcp/0"])
@@ -37,7 +43,23 @@ async def main(cid: str):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    demo_dir = os.environ.get(
+        "IPFS_DEMO_BLOCKSTORE",
+        os.path.join(os.path.dirname(__file__), "demo_blocks"),
+    )
+    cid_file = os.path.join(demo_dir, "last_cid.txt")
+
+    if len(sys.argv) > 1:
+        target_cid = sys.argv[1]
+    elif os.path.exists(cid_file):
+        with open(cid_file) as f:
+            target_cid = f.read().strip()
+        print(
+            f"No CID argument provided; reading last CID written by 05a: {target_cid}"
+        )
+    else:
         print("Usage: python examples/05b_localstore_read.py <cid>")
+        print("Hint: Run examples/05a_localstore_write.py first.")
         sys.exit(1)
-    trio.run(main, sys.argv[1])
+
+    trio.run(main, target_cid)

@@ -1,0 +1,56 @@
+- generic [ref=f4e3]:
+  - complementary [ref=f4e4]:
+    - generic [ref=f4e5]: py-ipfs-lite
+    - navigation [ref=f4e11]:
+      - link "Dashboard" [ref=f4e12] [cursor=pointer]:
+        - /url: /
+      - link "Files" [ref=f4e18] [cursor=pointer]:
+        - /url: /files
+      - link "Blocks" [ref=f4e23] [cursor=pointer]:
+        - /url: /blocks
+      - link "DAG" [ref=f4e27] [cursor=pointer]:
+        - /url: /dag
+      - link "Pins" [ref=f4e32] [cursor=pointer]:
+        - /url: /pins
+      - link "Swarm" [ref=f4e35] [cursor=pointer]:
+        - /url: /swarm
+      - link "PubSub" [ref=f4e40] [cursor=pointer]:
+        - /url: /pubsub
+      - link "Grafana" [ref=f4e44] [cursor=pointer]:
+        - /url: /grafana
+      - link "Metrics" [ref=f4e48] [cursor=pointer]:
+        - /url: /metrics
+      - link "Repo" [ref=f4e51] [cursor=pointer]:
+        - /url: /repo
+      - link "IPNS" [ref=f4e54] [cursor=pointer]:
+        - /url: /ipns
+      - link "Debug" [ref=f4e58] [cursor=pointer]:
+        - /url: /debug
+  - generic [ref=f4e69]:
+    - banner [ref=f4e70]:
+      - heading "Pins" [level=1] [ref=f4e71]
+      - status [ref=f4e72]:
+        - generic [ref=f4e74]: Disconnected
+    - main [ref=f4e75]:
+      - paragraph [ref=f4e76]: Pin and unpin content
+      - generic [ref=f4e77]:
+        - generic [ref=f4e78]:
+          - generic [ref=f4e79]:
+            - generic [ref=f4e80]: Pin
+            - generic [ref=f4e86]:
+              - generic [ref=f4e88]:
+                - textbox "Enter CID to pin..." [ref=f4e89]
+                - button [disabled]
+              - button "Pin" [disabled]
+          - generic [ref=f4e90]:
+            - generic [ref=f4e91]: Unpin
+            - generic [ref=f4e99]:
+              - generic [ref=f4e101]:
+                - textbox "Enter CID to unpin..." [ref=f4e102]
+                - button [disabled]
+              - button "Unpin" [disabled]
+        - generic [ref=f4e103]:
+          - generic [ref=f4e105]:
+            - generic [ref=f4e106]: Pinned Content
+            - button "Refresh pins" [disabled]
+          - paragraph [ref=f4e112]: Loading pins...

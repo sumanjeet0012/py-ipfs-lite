@@ -1,0 +1,55 @@
+- generic [ref=f10e3]:
+  - complementary [ref=f10e4]:
+    - generic [ref=f10e5]: py-ipfs-lite
+    - navigation [ref=f10e11]:
+      - link "Dashboard" [ref=f10e12] [cursor=pointer]:
+        - /url: /
+      - link "Files" [ref=f10e18] [cursor=pointer]:
+        - /url: /files
+      - link "Blocks" [ref=f10e23] [cursor=pointer]:
+        - /url: /blocks
+      - link "DAG" [ref=f10e27] [cursor=pointer]:
+        - /url: /dag
+      - link "Pins" [ref=f10e32] [cursor=pointer]:
+        - /url: /pins
+      - link "Swarm" [ref=f10e35] [cursor=pointer]:
+        - /url: /swarm
+      - link "PubSub" [ref=f10e40] [cursor=pointer]:
+        - /url: /pubsub
+      - link "Grafana" [ref=f10e44] [cursor=pointer]:
+        - /url: /grafana
+      - link "Metrics" [ref=f10e48] [cursor=pointer]:
+        - /url: /metrics
+      - link "Repo" [ref=f10e51] [cursor=pointer]:
+        - /url: /repo
+      - link "IPNS" [ref=f10e54] [cursor=pointer]:
+        - /url: /ipns
+      - link "Debug" [ref=f10e58] [cursor=pointer]:
+        - /url: /debug
+  - generic [ref=f10e69]:
+    - banner [ref=f10e70]:
+      - heading "IPNS" [level=1] [ref=f10e71]
+      - status [ref=f10e72]:
+        - generic [ref=f10e74]: Disconnected
+    - main [ref=f10e75]:
+      - paragraph [ref=f10e76]: IPNS name publishing and resolution
+      - generic [ref=f10e77]:
+        - generic [ref=f10e78]:
+          - generic [ref=f10e79]: Publish
+          - generic [ref=f10e81]:
+            - generic [ref=f10e82]:
+              - generic [ref=f10e83]: IPFS Path
+              - textbox "/ipfs/Qm..." [ref=f10e84]
+            - generic [ref=f10e85]:
+              - generic [ref=f10e86]: Lifetime (hours)
+              - spinbutton "24" [ref=f10e87]
+            - button "Publish" [disabled]
+        - generic [ref=f10e88]:
+          - generic [ref=f10e89]: Resolve
+          - generic [ref=f10e91]:
+            - generic [ref=f10e92]:
+              - generic [ref=f10e93]: IPNS Name
+              - generic [ref=f10e94]:
+                - textbox "Enter IPNS name..." [ref=f10e95]
+                - button [disabled]
+            - button "Resolve" [disabled]
