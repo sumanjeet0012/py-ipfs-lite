@@ -647,3 +647,82 @@ def test_check_for_leaks_keeps_stream_while_connection_registered():
     assert len(leaked) == 1  # open long enough -> genuine leak candidate
     assert tracker.streams  # record kept
     assert tracker.peer_stream_stats["peer1"].suspected_leaks == 1
+
+
+@pytest.mark.trio
+async def test_connection_stats_lru_capacity_eviction():
+    tracker = ConnectionStatsTracker(max_stats_capacity=3)
+
+    # Connect and disconnect 3 peers
+    for i in range(1, 4):
+        c = _FakeConn(_FakeMuxedConn(f"peer{i}"))
+        await tracker.connected(None, c)
+        await tracker.disconnected(None, c)
+
+    assert len(tracker.stats) == 3
+    assert list(tracker.stats.keys()) == ["peer1", "peer2", "peer3"]
+
+    # Connect and disconnect peer4 -> peer1 (oldest disconnected) should be evicted
+    c4 = _FakeConn(_FakeMuxedConn("peer4"))
+    await tracker.connected(None, c4)
+    await tracker.disconnected(None, c4)
+
+    assert len(tracker.stats) == 3
+    assert "peer1" not in tracker.stats
+    assert list(tracker.stats.keys()) == ["peer2", "peer3", "peer4"]
+
+
+@pytest.mark.trio
+async def test_connection_stats_active_peer_not_evicted():
+    tracker = ConnectionStatsTracker(max_stats_capacity=3)
+
+    # peer1 stays actively connected
+    c1 = _FakeConn(_FakeMuxedConn("peer1"))
+    await tracker.connected(None, c1)
+
+    # peer2 and peer3 connect and disconnect
+    c2 = _FakeConn(_FakeMuxedConn("peer2"))
+    await tracker.connected(None, c2)
+    await tracker.disconnected(None, c2)
+
+    c3 = _FakeConn(_FakeMuxedConn("peer3"))
+    await tracker.connected(None, c3)
+    await tracker.disconnected(None, c3)
+
+    assert len(tracker.stats) == 3
+
+    # peer4 connects and disconnects -> peer2 (oldest disconnected) is evicted, NOT peer1
+    c4 = _FakeConn(_FakeMuxedConn("peer4"))
+    await tracker.connected(None, c4)
+    await tracker.disconnected(None, c4)
+
+    assert len(tracker.stats) == 3
+    assert "peer1" in tracker.stats
+    assert "peer2" not in tracker.stats
+    assert "peer3" in tracker.stats
+    assert "peer4" in tracker.stats
+
+
+@pytest.mark.trio
+async def test_connection_stats_lru_access_refresh():
+    tracker = ConnectionStatsTracker(max_stats_capacity=3)
+
+    for i in range(1, 4):
+        c = _FakeConn(_FakeMuxedConn(f"peer{i}"))
+        await tracker.connected(None, c)
+        await tracker.disconnected(None, c)
+
+    # Order is peer1, peer2, peer3. Refresh peer1 by ping
+    tracker.mark_ping_completed("peer1")
+    # Order now: peer2, peer3, peer1
+
+    # Connect peer4 -> oldest disconnected is now peer2!
+    c4 = _FakeConn(_FakeMuxedConn("peer4"))
+    await tracker.connected(None, c4)
+    await tracker.disconnected(None, c4)
+
+    assert len(tracker.stats) == 3
+    assert "peer2" not in tracker.stats
+    assert "peer1" in tracker.stats
+    assert "peer3" in tracker.stats
+    assert "peer4" in tracker.stats

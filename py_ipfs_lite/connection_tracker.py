@@ -1,7 +1,7 @@
 import logging
 import time
 import weakref
-from collections import deque
+from collections import OrderedDict, deque
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
@@ -280,12 +280,13 @@ def _extract_transport_info(
 
 
 class ConnectionStatsTracker(INotifee):
-    def __init__(self) -> None:
+    def __init__(self, max_stats_capacity: int = 500) -> None:
         # The swarm network last seen in a notifee callback.  Its live
         # ``connections`` table is the authoritative source of truth for
         # whether a connection (and therefore its streams) is still alive.
         self._network: INetwork | None = None
-        self.stats: dict[str, PeerConnectionStats] = {}
+        self.stats: OrderedDict[str, PeerConnectionStats] = OrderedDict()
+        self._max_stats_capacity: int = max_stats_capacity
         self.streams: dict[str, StreamRecord] = {}
         self.peer_stream_stats: dict[str, PeerStreamStats] = {}
         # Per-peer lifetime analytics: peer_id -> (sum of durations, count).
@@ -395,7 +396,12 @@ class ConnectionStatsTracker(INotifee):
             len(self._conn_meta),
         )
 
-        stats = self.stats.setdefault(peer_id, PeerConnectionStats(peer_id=peer_id))
+        stats = self.stats.get(peer_id)
+        if stats is None:
+            stats = PeerConnectionStats(peer_id=peer_id)
+            self.stats[peer_id] = stats
+        else:
+            self.stats.move_to_end(peer_id)
         stats.total_connections += 1
         stats.current_connections += 1
         if stats.first_connected_at is None:
@@ -417,6 +423,9 @@ class ConnectionStatsTracker(INotifee):
             ).inc()
         except Exception:
             pass
+
+        if len(self.stats) > self._max_stats_capacity:
+            self._enforce_stats_capacity()
 
         logger.debug(
             "notifee: peer connected: %s (conns: %d, total: %d, dir: %s, "
@@ -483,7 +492,8 @@ class ConnectionStatsTracker(INotifee):
         self.total_disconnected_events += 1
 
         logger.warning(
-            "DIAG-disconnected: peer=%s id(conn)=%d had_meta=%s popped_muxed=%s meta_count=%d",
+            "DIAG-disconnected: peer=%s id(conn)=%d had_meta=%s "
+            "popped_muxed=%s meta_count=%d",
             peer_id,
             conn_id,
             conn_meta is not None,
@@ -495,6 +505,7 @@ class ConnectionStatsTracker(INotifee):
         if stats:
             stats.current_connections = max(0, stats.current_connections - 1)
             stats.last_disconnected_at = now_ts
+            self.stats.move_to_end(peer_id)
 
         # Determine reasonable root-cause classification hint
         reason_hint = "remote_closed_or_idle"
@@ -560,7 +571,7 @@ class ConnectionStatsTracker(INotifee):
             pass
 
         # Enforce memory cap on stats and stream histories
-        if len(self.stats) > 2000:
+        if len(self.stats) > self._max_stats_capacity:
             self._enforce_stats_capacity()
 
         logger.debug(
@@ -573,13 +584,13 @@ class ConnectionStatsTracker(INotifee):
 
     def _enforce_stats_capacity(self) -> None:
         """Evict oldest disconnected peer stats to keep memory bounded."""
-        if len(self.stats) <= 500:
+        if len(self.stats) <= self._max_stats_capacity:
             return
         to_remove = []
         for pid, s in self.stats.items():
             if s.current_connections == 0:
                 to_remove.append(pid)
-                if len(self.stats) - len(to_remove) <= 300:
+                if len(self.stats) - len(to_remove) <= self._max_stats_capacity:
                     break
         for pid in to_remove:
             self.stats.pop(pid, None)
@@ -1285,3 +1296,4 @@ class ConnectionStatsTracker(INotifee):
             if self.stats[peer_id].first_ping_at is None:
                 self.stats[peer_id].first_ping_at = now_str
             self.stats[peer_id].last_ping_at = now_str
+            self.stats.move_to_end(peer_id)
