@@ -313,16 +313,21 @@ def main() -> None:
                     listen_addrs.append(Multiaddr(f"/ip4/0.0.0.0/udp/{port}/quic-v1"))
                 if not listen_addrs:
                     raise ValueError(
-                        f"No valid transports in IPFS_LITE_TRANSPORTS='{config.transports}'. "
+                        f"No valid transports in IPFS_LITE_TRANSPORTS="
+                        f"'{config.transports}'. "
                         "Expected comma-separated list of: tcp, ws, quic"
                     )
                 key_pair = _get_key_pair(parsed_args.seed, config)
+
+                from py_ipfs_lite.peer.state import PeerState
 
                 peer = Peer(config, host_key=key_pair, listen_addrs=listen_addrs)
                 app.state.peer = peer
 
                 hyperconfig = hypercorn.config.Config()
                 hyperconfig.bind = [f"{parsed_args.api_host}:{parsed_args.api_port}"]
+                hyperconfig.startup_timeout = 300.0
+                hyperconfig.shutdown_timeout = 30.0
 
                 logger.info(
                     f"Starting py-ipfs-lite HTTP API daemon at http://{parsed_args.api_host}:{parsed_args.api_port}"
@@ -331,6 +336,17 @@ def main() -> None:
                 async def _serve_with_restart() -> None:
                     while True:
                         try:
+                            curr_peer = getattr(app.state, "peer", None)
+                            if (
+                                curr_peer is not None
+                                and getattr(curr_peer, "_state", None)
+                                == PeerState.STOPPED
+                            ):
+                                app.state.peer = Peer(
+                                    config,
+                                    host_key=key_pair,
+                                    listen_addrs=listen_addrs,
+                                )
                             await hypercorn.trio.serve(app, hyperconfig)
                             break  # clean exit
                         except Exception as exc:
