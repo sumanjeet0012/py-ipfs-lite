@@ -364,6 +364,9 @@ class ConnectionStatsTracker(INotifee):
         """Accumulate a closed stream's lifetime into the peer's aggregate."""
         total, count = self._peer_lifetime.get(peer_id, (0.0, 0))
         self._peer_lifetime[peer_id] = (total + duration, count + 1)
+        if len(self._peer_lifetime) > 1000:
+            for k in list(self._peer_lifetime.keys())[:200]:
+                self._peer_lifetime.pop(k, None)
 
     # ------------------------------------------------------------------
     # Connection lifecycle (INotifee implementation)
@@ -584,18 +587,32 @@ class ConnectionStatsTracker(INotifee):
 
     def _enforce_stats_capacity(self) -> None:
         """Evict oldest disconnected peer stats to keep memory bounded."""
-        if len(self.stats) <= self._max_stats_capacity:
-            return
-        to_remove = []
-        for pid, s in self.stats.items():
-            if s.current_connections == 0:
-                to_remove.append(pid)
-                if len(self.stats) - len(to_remove) <= self._max_stats_capacity:
-                    break
-        for pid in to_remove:
-            self.stats.pop(pid, None)
-            self.peer_stream_stats.pop(pid, None)
-            self._peer_lifetime.pop(pid, None)
+        if len(self.stats) > self._max_stats_capacity:
+            to_remove = []
+            for pid, s in self.stats.items():
+                if s.current_connections == 0:
+                    to_remove.append(pid)
+                    if len(self.stats) - len(to_remove) <= self._max_stats_capacity:
+                        break
+            for pid in to_remove:
+                self.stats.pop(pid, None)
+                self.peer_stream_stats.pop(pid, None)
+                self._peer_lifetime.pop(pid, None)
+
+        # Enforce cap on peer_stream_stats (evict peers with no open streams)
+        if len(self.peer_stream_stats) > 1000:
+            stale_peers = [
+                pid
+                for pid, s in self.peer_stream_stats.items()
+                if s.current_open == 0
+            ]
+            for pid in stale_peers[:300]:
+                self.peer_stream_stats.pop(pid, None)
+
+        # Enforce cap on _peer_lifetime
+        if len(self._peer_lifetime) > 1000:
+            for k in list(self._peer_lifetime.keys())[:300]:
+                self._peer_lifetime.pop(k, None)
 
         if len(self._conn_meta) > 500:
             now_mono = time.monotonic()
@@ -842,9 +859,10 @@ class ConnectionStatsTracker(INotifee):
 
         self._mark_finalized(key)
         IPFS_STREAMS_CLOSED_TOTAL.inc()
+        dur_str = f"{record.duration:.2f}s" if record.duration is not None else "unknown"
         logger.debug(
             f"stream closed peer={record.peer_id} proto={record.protocol} "
-            f"dir={record.direction} duration={record.duration:.2f}s "
+            f"dir={record.direction} duration={dur_str} "
             f"reset={record.was_reset} open_now={peer_stats.current_open}"
         )
 
