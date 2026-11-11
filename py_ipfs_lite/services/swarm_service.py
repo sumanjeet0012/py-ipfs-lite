@@ -9,9 +9,9 @@ from typing import Any
 
 from fastapi import HTTPException
 
-logger = logging.getLogger("py_ipfs_lite.swarm_service")
-
 from py_ipfs_lite.peer import Peer
+
+logger = logging.getLogger("py_ipfs_lite.swarm_service")
 
 
 @dataclass
@@ -54,21 +54,36 @@ async def list_connected_peers(peer: Peer) -> SwarmPeers:
         if pid_str in seen:
             continue
         seen.add(pid_str)
-        try:
-            addrs = [str(a) for a in peerstore.addrs(peer_id)]
-        except Exception:
-            addrs = []
+
+        # Prefer active transport address(es) from the live connection(s),
+        # falling back to bounded peerstore addresses (max 3) to keep payload compact.
+        addrs: list[str] = []
+        if conns:
+            conn_list = conns if isinstance(conns, list) else [conns]
+            for c in conn_list:
+                try:
+                    t_addrs = c.get_transport_addresses()
+                    if t_addrs:
+                        for a in t_addrs:
+                            s = str(a)
+                            if s and s not in addrs:
+                                addrs.append(s)
+                except Exception:
+                    pass
+        if not addrs:
+            try:
+                for a in peerstore.addrs(peer_id):
+                    s = str(a)
+                    if s and s not in addrs:
+                        addrs.append(s)
+                    if len(addrs) >= 3:
+                        break
+            except Exception:
+                pass
+        else:
+            addrs = addrs[:3]
 
         meta = conn_meta_map.get(pid_str)
-        if meta is None:
-            with open("/tmp/zombie_diag.log", "a") as f:
-                f.write(f"ZOMBIE: peer={pid_str} conns={len(conns)} meta_count={len(conn_meta_map)}\n")
-        elif meta.get("connected_at") is None:
-            with open("/tmp/zombie_diag.log", "a") as f:
-                f.write(f"ZOMBIE2: peer={pid_str} meta_keys={list(meta.keys())}\n")
-        elif meta.get("transport", "unknown") == "unknown":
-            with open("/tmp/zombie_diag.log", "a") as f:
-                f.write(f"ZOMBIE3: peer={pid_str} meta_transport={meta.get('transport')} connected_at={meta.get('connected_at')} start_mono={meta.get('start_mono')}\n")
         duration_secs = (
             round(now_mono - meta["start_mono"], 1)
             if meta and "start_mono" in meta
