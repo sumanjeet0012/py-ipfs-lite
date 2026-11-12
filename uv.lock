@@ -1075,7 +1075,7 @@ wheels = [
 [[package]]
 name = "libp2p"
 version = "0.8.1"
-source = { git = "https://github.com/sumanjeet0012/py-libp2p.git?rev=metrics#fb614d179e649aa6b8d1d783369342dfd9283f47" }
+source = { git = "https://github.com/sumanjeet0012/py-libp2p.git?rev=metrics#394eb06162be600cfbf1e5d58e914f8775a90758" }
 dependencies = [
     { name = "aioquic" },
     { name = "anyio" },
