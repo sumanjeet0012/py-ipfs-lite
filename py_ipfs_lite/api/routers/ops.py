@@ -111,7 +111,12 @@ async def debug_memory(request: Request) -> Any:
         raw_host = getattr(peer.host, "_host", peer.host) if peer.host else None
         if raw_host is not None and hasattr(raw_host, "get_peerstore"):
             ps = raw_host.get_peerstore()
-            subsystems["peerstore_peers_count"] = len(ps.peer_ids())
+            if hasattr(ps, "count_peers"):
+                subsystems["peerstore_peers_count"] = ps.count_peers()
+            elif hasattr(ps, "peer_data_map"):
+                subsystems["peerstore_peers_count"] = len(ps.peer_data_map)
+            else:
+                subsystems["peerstore_peers_count"] = len(ps.peer_ids())
             if hasattr(ps, "peer_data_map"):
                 subsystems["peer_data_map_len"] = len(ps.peer_data_map)
             if hasattr(ps, "peer_record_map"):
@@ -124,13 +129,16 @@ async def debug_memory(request: Request) -> Any:
     try:
         task_objs = [o for o in all_objs if type(o).__name__ == "Task"]
         for t in task_objs:
-            if hasattr(t, "coro") and hasattr(t.coro, "cr_code"):
+            t_name = getattr(t, "name", None)
+            if t_name and not t_name.startswith("<"):
+                task_counts[t_name] += 1
+            elif hasattr(t, "coro") and hasattr(t.coro, "cr_code"):
                 co = t.coro.cr_code
                 task_counts[
                     f"{co.co_filename.split('/')[-1]}:{co.co_name}:{co.co_firstlineno}"
                 ] += 1
             else:
-                task_counts[getattr(t, "name", "unknown")] += 1
+                task_counts[str(t_name or "unknown")] += 1
     except Exception:
         pass
 

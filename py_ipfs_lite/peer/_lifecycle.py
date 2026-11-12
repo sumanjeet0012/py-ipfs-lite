@@ -211,10 +211,13 @@ class LifecycleMixin:
             my_id = raw_host.get_id()
 
             max_peers = int(os.environ.get("IPFS_LITE_RT_WARMUP_PEERS", "256"))
-            all_ids = list(peerstore.peer_ids())
-            candidates = [pid for pid in all_ids if pid != my_id]
-            if len(candidates) > max_peers:
-                candidates = random.sample(candidates, max_peers)
+            if hasattr(peerstore, "sample_peer_ids"):
+                candidates = peerstore.sample_peer_ids(limit=max_peers)
+            else:
+                all_ids = list(peerstore.peer_ids())
+                candidates = [pid for pid in all_ids if pid != my_id]
+                if len(candidates) > max_peers:
+                    candidates = random.sample(candidates, max_peers)
 
             added = 0
             skipped_no_addr = 0
