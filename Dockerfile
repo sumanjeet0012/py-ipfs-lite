@@ -25,10 +25,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # C-level allocation fragmentation (OpenSSL encrypt/decrypt cycles,
 # aioquic packet buffers, etc.)
 # - background_thread:true: use background threads for arena decay
-# - decay_time:1: decay unused pages within 1 second (default is 10s)
+# - dirty_decay_ms/muzzy_decay_ms: reclaim unused pages after about one second
 # - narenas:4: limit arenas to reduce idle memory overhead
 ENV LD_PRELOAD=libjemalloc.so.2 \
-    JEMALLOC_CONF=background_thread:true,decay_time:1,narenas:4
+    MALLOC_CONF=background_thread:true,dirty_decay_ms:1000,muzzy_decay_ms:1000,narenas:4
 
 # Set working directory
 WORKDIR /app
@@ -43,7 +43,10 @@ ADD https://api.github.com/repos/sumanjeet0012/py-libp2p/git/refs/heads/metrics 
 COPY . .
 
 # Install the application without using uv's internal cache for git dependencies
-RUN uv pip install --system --no-cache .
+ARG LIBP2P_REV=metrics
+RUN uv pip install --system --no-cache . \
+    && uv pip install --system --no-cache --reinstall-package libp2p \
+       "libp2p @ git+https://github.com/sumanjeet0012/py-libp2p.git@${LIBP2P_REV}"
 
 # Declare data volume for persistent storage
 VOLUME ["/app/.py_ipfs_lite"]

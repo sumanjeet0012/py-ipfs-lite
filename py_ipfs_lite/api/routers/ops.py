@@ -55,6 +55,19 @@ async def debug_routing_table(request: Request) -> Any:
     return JSONResponse(content={"count": res.count, "peers": res.peers})
 
 
+@router.get("/api/v0/debug/memory/retention")
+async def debug_memory_retention(request: Request) -> Any:
+    """Read ownership and allocator counters without GC or a heap scan."""
+    from py_ipfs_lite.memory_diagnostics import allocator_stats, retention_counts
+
+    peer: Peer = request.app.state.peer
+    raw_host = getattr(peer.host, "_host", peer.host) if peer.host else None
+    retention = retention_counts(peer, raw_host.get_network()) if raw_host else {}
+    return JSONResponse(
+        content={"retention": retention, "allocator": allocator_stats()}
+    )
+
+
 @router.get("/api/v0/debug/memory")
 async def debug_memory(request: Request) -> Any:
     """Detailed live memory and object introspection endpoint."""
@@ -134,10 +147,23 @@ async def debug_memory(request: Request) -> Any:
     try:
         ping_svc = getattr(peer, "_ping_service", None)
         if ping_svc is not None:
-            subsystems["ping_outbound_streams_len"] = len(getattr(ping_svc, "_outbound_streams", {}))
-            subsystems["ping_inbound_streams_len"] = len(getattr(ping_svc, "_inbound_streams", {}))
+            subsystems["ping_outbound_streams_len"] = len(
+                getattr(ping_svc, "_outbound_streams", {})
+            )
+            subsystems["ping_inbound_streams_len"] = len(
+                getattr(ping_svc, "_inbound_streams", {})
+            )
     except Exception as e:
         subsystems["ping_err"] = str(e)
+
+    try:
+        from py_ipfs_lite.memory_diagnostics import retention_counts
+
+        raw_host = getattr(peer.host, "_host", peer.host) if peer.host else None
+        if raw_host is not None:
+            subsystems["retention"] = retention_counts(peer, raw_host.get_network())
+    except Exception as e:
+        subsystems["retention_error"] = str(e)
 
     # Introspect Trio tasks via GC
     task_counts: Counter[str] = Counter()
@@ -202,13 +228,15 @@ async def debug_memory(request: Request) -> Any:
         "libp2p.transport.quic.listener.ServerQuicConnection",
         "aioquic.quic.connection.QuicConnection",
         "libp2p.bitswap.message_queue.BitswapMessageQueue",
-        "trio._core._run.Task",
+        "trio.lowlevel.Task",
     )
     class_counts = {name: counts.get(name, 0) for name in tracked_classes}
 
     # Test malloc_trim
     rss_before_trim = 0.0
     rss_after_trim = 0.0
+    allocator: dict[str, Any] = {}
+    trim_attempted = False
     try:
         import ctypes
         import os
@@ -217,8 +245,13 @@ async def debug_memory(request: Request) -> Any:
 
         proc = psutil.Process(os.getpid())
         rss_before_trim = proc.memory_info().rss / (1024 * 1024)
-        libc = ctypes.CDLL("libc.so.6")
-        libc.malloc_trim(0)
+        from py_ipfs_lite.memory_diagnostics import allocator_stats
+
+        allocator = allocator_stats()
+        if allocator["backend"] != "jemalloc":
+            libc = ctypes.CDLL("libc.so.6")
+            libc.malloc_trim(0)
+            trim_attempted = True
         rss_after_trim = proc.memory_info().rss / (1024 * 1024)
     except Exception:
         pass
@@ -228,6 +261,8 @@ async def debug_memory(request: Request) -> Any:
             "total_objects": len(all_objs),
             "rss_before_trim_mb": round(rss_before_trim, 2),
             "rss_after_trim_mb": round(rss_after_trim, 2),
+            "allocator": allocator,
+            "allocator_trim_attempted": trim_attempted,
             "server_conns_count": len(server_conns),
             "server_conn_referrers": server_conn_referrers,
             "class_counts": class_counts,
