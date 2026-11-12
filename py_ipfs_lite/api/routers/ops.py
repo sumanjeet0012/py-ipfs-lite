@@ -99,6 +99,13 @@ async def debug_memory(request: Request) -> Any:
             subsystems["swarm_listeners_len"] = (
                 len(raw_swarm.listeners) if hasattr(raw_swarm, "listeners") else None
             )
+            # Peer keys can stay flat while per-peer connection lists keep
+            # retired SwarmConn objects alive; report the real object count.
+            if hasattr(raw_swarm, "connections"):
+                subsystems["swarm_conn_objects"] = sum(
+                    len(conns) if isinstance(conns, list) else 1
+                    for conns in raw_swarm.connections.values()
+                )
             if hasattr(raw_swarm, "transport_manager"):
                 tm = raw_swarm.transport_manager
                 subsystems["transports"] = [
@@ -126,6 +133,7 @@ async def debug_memory(request: Request) -> Any:
 
     # Introspect Trio tasks via GC
     task_counts: Counter[str] = Counter()
+    start_task_stacks: Counter[str] = Counter()
     try:
         task_objs = [o for o in all_objs if type(o).__name__ == "Task"]
         for t in task_objs:
@@ -139,8 +147,24 @@ async def debug_memory(request: Request) -> Any:
                 ] += 1
             else:
                 task_counts[str(t_name or "unknown")] += 1
-    except Exception:
-        pass
+
+            if t_name == "start[daemon=False]":
+                coro = getattr(t, "coro", None)
+                curr = coro
+                frames = []
+                while curr:
+                    if hasattr(curr, "cr_frame") and curr.cr_frame:
+                        f = curr.cr_frame
+                        frames.append(
+                            f"{f.f_code.co_filename.split('/')[-1]}:{f.f_lineno} ({f.f_code.co_name})"
+                        )
+                        curr = getattr(curr, "cr_await", None)
+                    else:
+                        break
+                stack_str = " -> ".join(frames[-4:]) if frames else "no_frames"
+                start_task_stacks[stack_str] += 1
+    except Exception as e:
+        start_task_stacks[f"error: {e}"] += 1
 
     # Introspect referrers of ServerQuicConnection
     server_conns = [o for o in all_objs if type(o).__name__ == "ServerQuicConnection"]
@@ -159,6 +183,20 @@ async def debug_memory(request: Request) -> Any:
                     pass
     except Exception:
         pass
+
+    # Connection/teardown accounting. These counts must stay flat in steady
+    # state; a rising SwarmConn/Yamux/QUIC count while swarm_connections_len is
+    # flat means retired connections are being retained.
+    tracked_classes = (
+        "libp2p.network.connection.swarm_connection.SwarmConn",
+        "libp2p.stream_muxer.yamux.yamux.Yamux",
+        "libp2p.transport.quic.connection.QUICConnection",
+        "libp2p.transport.quic.listener.ServerQuicConnection",
+        "aioquic.quic.connection.QuicConnection",
+        "libp2p.bitswap.message_queue.BitswapMessageQueue",
+        "trio._core._run.Task",
+    )
+    class_counts = {name: counts.get(name, 0) for name in tracked_classes}
 
     # Test malloc_trim
     rss_before_trim = 0.0
@@ -184,6 +222,8 @@ async def debug_memory(request: Request) -> Any:
             "rss_after_trim_mb": round(rss_after_trim, 2),
             "server_conns_count": len(server_conns),
             "server_conn_referrers": server_conn_referrers,
+            "class_counts": class_counts,
+            "start_task_stacks": dict(start_task_stacks.most_common(20)),
             "top_tasks": [
                 {"task": k, "count": int(v)} for k, v in task_counts.most_common(20)
             ],

@@ -157,6 +157,10 @@ class LifecycleMixin:
             # Keep connections alive by sending periodic pings (fixes 25-30s idle disconnects)
             self._nursery.start_soon(self._keep_alive_loop)
 
+            # Reconcile retired connections and return freed heap to the OS so
+            # steady-state RSS stays flat instead of ratcheting upward.
+            self._nursery.start_soon(self._memory_hygiene_loop)
+
             # NOTE: the connection_pruner_loop is intentionally NOT started.
             # Pruning works by disconnecting peers, which triggers immediate
             # reconnect attempts from both sides. Each reconnect attempt

@@ -111,6 +111,55 @@ class MaintenanceMixin:
             except Exception as e:
                 logger.debug(f"Keep-alive loop error: {e}")
 
+    async def _memory_hygiene_loop(self) -> None:
+        """
+        Reconcile dead connections and return freed heap to the OS.
+
+        go-libp2p's swarm unregisters a connection synchronously when it
+        closes, and the Go runtime's scavenger returns unused pages to the OS.
+        Python needs both steps spelled out: prune connections that are
+        already closed but still registered, collect reference cycles left
+        behind by cancelled task trees, and hand free malloc arenas back with
+        ``malloc_trim``.  Without this, steady-state RSS ratchets upward even
+        after the live object count stops growing.
+        """
+        import ctypes
+        import gc
+
+        raw_host = getattr(self.host, "_host", self.host)
+        if raw_host is None:
+            return
+
+        libc = None
+        try:
+            libc = ctypes.CDLL("libc.so.6")
+        except Exception:
+            logger.debug("malloc_trim unavailable on this platform")
+
+        while True:
+            await trio.sleep(60.0)
+
+            try:
+                network = raw_host.get_network()
+                prune = getattr(network, "prune_closed_connections", None)
+                if prune is not None:
+                    pruned = await prune()
+                    if pruned:
+                        logger.info(
+                            "Memory hygiene: pruned %d closed connection(s)",
+                            pruned,
+                        )
+            except Exception as e:
+                logger.debug(f"Memory hygiene prune error: {e}")
+
+            try:
+                collected = gc.collect()
+                if libc is not None:
+                    libc.malloc_trim(0)
+                logger.debug("Memory hygiene: collected %d cyclic object(s)", collected)
+            except Exception as e:
+                logger.debug(f"Memory hygiene gc error: {e}")
+
     async def _ping_peer(self, peer_id: Any, timeout: float = 3.0) -> None:
         """
         Send a single keepalive ping to *peer_id*.
