@@ -44,7 +44,8 @@ def retention_counts(peer: Any, network: Any) -> dict[str, Any]:
         counts["gossipsub_backoff_peers"] = sum(
             len(v) for v in gossip.back_off.values()
         )
-    exchange = getattr(getattr(peer, "exchange", None), "_exchange", None)
+    adapter = getattr(peer, "_exchange", None)
+    exchange = getattr(adapter, "_exchange", adapter)
     if exchange is not None:
         counts["bitswap_queues"] = len(exchange._message_queues)
         counts["bitswap_session_interest_cids"] = len(exchange.sim._interests)
