@@ -87,6 +87,12 @@ class MaintenanceMixin:
                 # every sweep re-enqueues them -> unbounded task accumulation.
                 self._inflight_pings.update(peers_to_ping)
 
+                # Prune _last_ping_time for peers that are no longer connected
+                if len(self._last_ping_time) > len(connected_peers) * 2:
+                    dead_peers = set(self._last_ping_time.keys()) - connected_peers
+                    for dp in dead_peers:
+                        self._last_ping_time.pop(dp, None)
+
                 async def _ping_with_semaphore(peer_id):
                     try:
                         async with keepalive_semaphore:
@@ -151,6 +157,19 @@ class MaintenanceMixin:
                         )
             except Exception as e:
                 logger.debug(f"Memory hygiene prune error: {e}")
+
+            try:
+                ps = getattr(self, "_ping_service", None)
+                if ps is not None and hasattr(ps, "_outbound_streams") and hasattr(ps, "_lock"):
+                    async with ps._lock:
+                        for pid, stream in list(ps._outbound_streams.items()):
+                            is_closed = getattr(stream, "is_closed", False)
+                            if callable(is_closed):
+                                is_closed = is_closed()
+                            if is_closed or getattr(getattr(stream, "swarm_conn", None), "is_closed", False):
+                                ps._outbound_streams.pop(pid, None)
+            except Exception as e:
+                logger.debug(f"Memory hygiene ping stream prune error: {e}")
 
             try:
                 collected = gc.collect()

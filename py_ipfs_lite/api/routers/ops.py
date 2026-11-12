@@ -131,6 +131,14 @@ async def debug_memory(request: Request) -> Any:
     except Exception as e:
         subsystems["peerstore_err"] = str(e)
 
+    try:
+        ping_svc = getattr(peer, "_ping_service", None)
+        if ping_svc is not None:
+            subsystems["ping_outbound_streams_len"] = len(getattr(ping_svc, "_outbound_streams", {}))
+            subsystems["ping_inbound_streams_len"] = len(getattr(ping_svc, "_inbound_streams", {}))
+    except Exception as e:
+        subsystems["ping_err"] = str(e)
+
     # Introspect Trio tasks via GC
     task_counts: Counter[str] = Counter()
     start_task_stacks: Counter[str] = Counter()
