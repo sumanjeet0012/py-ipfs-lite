@@ -1,6 +1,7 @@
 """Read-only ownership counts and native allocator diagnostics."""
 
 import ctypes
+import sys
 from collections import Counter
 from typing import Any
 
@@ -12,6 +13,8 @@ def retention_counts(peer: Any, network: Any) -> dict[str, Any]:
         "notifees": len(notifees),
         "notifees_by_type": dict(Counter(type(n).__name__ for n in notifees)),
     }
+    if hasattr(sys, "getallocatedblocks"):
+        counts["python_allocated_blocks"] = sys.getallocatedblocks()
     stream_owners: dict[str, Any] = {}
     for connections in getattr(network, "connections", {}).values():
         for connection in connections:
@@ -49,6 +52,10 @@ def retention_counts(peer: Any, network: Any) -> dict[str, Any]:
         if isinstance(cache, dict):
             records = [record for record in cache.values() if record is not None]
             address_counts = [len(record.addrs) for record in records]
+            payload_sizes = [
+                len(getattr(getattr(record, "envelope", None), "raw_payload", b""))
+                for record in getattr(store, "peer_record_map", {}).values()
+            ]
             counts["peerstore_cache"] = {
                 "peers": len(records),
                 "capacity": getattr(store, "max_cached_peers", None),
@@ -59,6 +66,8 @@ def retention_counts(peer: Any, network: Any) -> dict[str, Any]:
                     record.ttl == 0 for record in records
                 ),
                 "signed_records": len(getattr(store, "peer_record_map", {})),
+                "signed_payload_bytes": sum(payload_sizes),
+                "max_signed_payload_bytes": max(payload_sizes, default=0),
             }
     connector = getattr(network, "auto_connector", None)
     if connector is not None:

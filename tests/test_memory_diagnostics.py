@@ -49,7 +49,9 @@ def test_peerstore_reports_record_sizes_as_well_as_cache_capacity():
             "two": SimpleNamespace(addrs=[1, 2, 3], protocols=[1, 2], ttl=3600),
         },
         max_cached_peers=1000,
-        peer_record_map={"one": object()},
+        peer_record_map={
+            "one": SimpleNamespace(envelope=SimpleNamespace(raw_payload=b"abc"))
+        },
     )
     peer = SimpleNamespace(host=SimpleNamespace(get_peerstore=lambda: store))
     result = retention_counts(peer, SimpleNamespace(notifees=[]))
@@ -61,4 +63,6 @@ def test_peerstore_reports_record_sizes_as_well_as_cache_capacity():
         "protocol_entries": 3,
         "permanent_or_legacy_records": 1,
         "signed_records": 1,
+        "signed_payload_bytes": 3,
+        "max_signed_payload_bytes": 3,
     }

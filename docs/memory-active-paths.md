@@ -87,7 +87,12 @@ preserves the existing per-peer TTL model; per-address expiry is not introduced.
 A read-only production scan found 35,946 protocol records with no duplicate
 protocols (maximum 49 protocols per record), ruling out protocol append as an
 active source: Identify clears the prior protocol list before adding it. An
-address scan found 38,551 records, maximum 4,160 addresses / 213,889 serialized
-bytes for one peer, and about 25 MB serialized across all peers on disk. Those
+address scan found 38,551 records, a maximum count of 4,160 addresses, and a
+largest serialized record of 213,889 bytes (2,614 addresses in that record).
+About 25 MB of address data is serialized across all peers on disk. Those
 are persisted sizes, not measured resident cache sizes. Cached address counts
 and largest cached records are exposed to test their relationship with RSS.
+
+The lightweight readings also include Python allocated blocks and the total /
+largest cached signed-record payload sizes. These are observational counters;
+they do not enable allocation tracing or change garbage collection policy.
