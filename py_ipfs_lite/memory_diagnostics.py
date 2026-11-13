@@ -12,6 +12,34 @@ def retention_counts(peer: Any, network: Any) -> dict[str, Any]:
         "notifees": len(notifees),
         "notifees_by_type": dict(Counter(type(n).__name__ for n in notifees)),
     }
+    stream_owners: dict[str, Any] = {}
+    for connections in getattr(network, "connections", {}).values():
+        for connection in connections:
+            muxed = connection.muxed_conn
+            name = type(muxed).__name__
+            entry = stream_owners.setdefault(
+                name,
+                {
+                    "connections": 0,
+                    "network_streams": 0,
+                    "closed_network_streams": 0,
+                    "transport_streams": 0,
+                    "message_channels": 0,
+                    "orphan_message_channels": 0,
+                },
+            )
+            streams = getattr(connection, "streams", ())
+            entry["connections"] += 1
+            entry["network_streams"] += len(streams)
+            entry["closed_network_streams"] += sum(s.is_closed for s in streams)
+            registry = getattr(muxed, "_streams", getattr(muxed, "streams", {}))
+            channels = getattr(muxed, "streams_msg_channels", {})
+            entry["transport_streams"] += len(registry)
+            entry["message_channels"] += len(channels)
+            entry["orphan_message_channels"] += sum(
+                sid not in registry for sid in channels
+            )
+    counts["stream_owners"] = stream_owners
     connector = getattr(network, "auto_connector", None)
     if connector is not None:
         counts["auto_connector"] = {

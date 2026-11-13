@@ -12,8 +12,8 @@ enabled.
 | Active path | libp2p modules reached | Memory ownership reviewed | Result |
 | --- | --- | --- | --- |
 | Host and connection management | `host/basic_host`, `network/swarm`, `network/auto_connector`, `network/tag_store`, `rcmgr` | Connection registration, background tasks, dial/disconnect history, tags, resource scopes | Bound recent dial diagnostics; expire disconnect streaks; prune even above target; remove empty unowned tags |
-| TCP and WebSocket | `transport/tcp`, `transport/websocket`, `security/noise`, `stream_muxer/yamux`, `network/stream` | Stream dictionaries, buffered data, half-close lifecycle, connection cleanup | Prior stream fixes retained; intentional write half-close preserved |
-| QUIC | `transport/quic`, `aioquic` | Wrapper and native stream registries, connection-ID routing, pending handshakes | Prior bidirectional reset cleanup retained; pending-ID cleanup and closed-connection accounting inspected |
+| TCP and WebSocket | `transport/tcp`, `transport/websocket`, `security/noise`, `stream_muxer/yamux`, `stream_muxer/mplex`, `network/stream` | Stream dictionaries, buffered data, half-close lifecycle, connection cleanup | Yamux is preferred and Mplex is the negotiated compatibility fallback. Remove Mplex channel entries on graceful completion in either close order; intentional write half-close preserved |
+| QUIC | `transport/quic`, `aioquic` | Wrapper and native stream registries, connection-ID routing, pending handshakes | Bridge passive transport termination to the outer NetStream/SwarmConn owner and release stream credits. FIN completion preserves buffered replies; late callback registration handles reset during opened notifications |
 | Identity and address observations | `identity/identify`, `identity/identify_push`, `host/observed_addr_manager` | Per-peer identify tasks, connection observations, address cache | Disconnect cleanup and weak connection observations inspected; no new unbounded owner reproduced in this pass |
 | Persistent peerstore | `peer/persistent/sync/peerstore`, `datastore/sqlite_sync` | In-memory peer/record caches versus on-disk discovered peers | In-memory caches capped at 1,000; total persisted peer count is not a count of full in-memory records |
 | Server-mode DHT and random walk | `kad_dht/kad_dht`, `routing_table`, `peer_routing`, `provider_store`, `value_store`, `discovery/random_walk` | Bucket eviction, one-shot pings, tags, provider/value records and lookup tasks | Prior PingService disposal retained; DHT tag removal now releases empty records. Remote provider/value stores have explicit size/expiry mechanisms; locally provided keys remain intentional node state |
@@ -51,3 +51,23 @@ restarting a process is not evidence of a reduced growth rate. Since both
 library retention fixes and allocator settings change in this deployment,
 the observed effect belongs to the combined change, not an isolated causal
 estimate for any one fix.
+
+Residual stream ownership found during overnight monitoring
+
+After the first rollout, matched 30-minute windows showed RSS growth of 0.243
+versus 0.169 MiB/min (about 30% lower), with similar mean connection counts
+(427 versus 422). The next two hours still grew at 0.132 MiB/min. This is
+evidence of improvement, not evidence that retention stopped.
+
+The two-hour and overnight heap snapshots showed QUICStream objects growing
+from 2,829 to 9,583, NetStream from 3,227 to 10,025, and Mplex StreamID objects
+from 2,268 to 7,027. Mplex retained send-channel entries after removing fully
+closed streams from its other registry. QUIC remote reset removed transport
+ownership but left outbound NetStream wrappers in SwarmConn.streams; there is
+no inbound-handler finally block for outbound streams. Repeated streams on a
+long-lived connection therefore accumulated even when ping caches held only
+one current stream per peer. Both paths reproduce in offline regression tests.
+
+The lightweight endpoint now reports registry counts by transport, including
+closed network wrappers and Mplex orphan channel entries. Track these with
+RSS and allocator allocated bytes; process restart alone cannot validate a fix.
