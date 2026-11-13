@@ -111,3 +111,17 @@ tests reproduce all these ownership transitions, including 100 close cycles
 with a one-connection limit. Live transport registry counts are exposed to
 verify the fix under the actual WS/WSS workload. The uninstrumented previous
 process cannot establish this path's quantitative share of RSS growth.
+
+Broader retention follow-up
+
+The next library revision also cleans timed-out PubSub readiness waiters,
+deduplicates repeated protocol-book additions, bounds all rate-limiter entity
+strategies, removes zero scoped-resource counters on release and rollback,
+bounds QUIC CID diagnostic histories/histograms, and cancels each Bitswap
+fetch's private provider-discovery worker when that fetch exits. Regression
+coverage includes shared waiters and concurrent live resource owners, so
+cleanup does not discard another operation's state. See the library's
+`docs/memory_retention_audit.md` for reproduced cases and diagnostic changes.
+These fixes include optional APIs not enabled by the production node and are
+not all claimed as causes of its measured RSS growth. They do not constitute
+a proof that every native dependency and optional transport is leak-free.
