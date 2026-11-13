@@ -117,6 +117,20 @@ def retention_counts(peer: Any, network: Any) -> dict[str, Any]:
         counts["gossipsub_backoff_peers"] = sum(
             len(v) for v in gossip.back_off.values()
         )
+        scorer = getattr(gossip, "scorer", None)
+        if scorer is not None:
+            subnets = scorer.subnet_tracking
+            addresses = scorer.ip_by_peer
+            counts["gossipsub_scoring"] = {
+                "ip_peers": len(addresses),
+                "subnets": len(subnets),
+                "subnet_memberships": sum(len(peers) for peers in subnets.values()),
+                "stale_subnet_memberships": sum(
+                    scorer._get_subnet(addresses.get(pid, "")) != subnet
+                    for subnet, peers in subnets.items()
+                    for pid in peers
+                ),
+            }
     adapter = getattr(peer, "_exchange", None)
     exchange = getattr(adapter, "_exchange", adapter)
     if exchange is not None:
@@ -129,6 +143,15 @@ def retention_counts(peer: Any, network: Any) -> dict[str, Any]:
                 for session in sessions
             }
         )
+        peer_stats = getattr(getattr(exchange, "peer_manager", None), "peers", {})
+        counts["bitswap_request_state"] = {
+            "wants": len(getattr(exchange, "_wantlist", {})),
+            "broadcast_wants": len(getattr(exchange, "_broadcast_wants", ())),
+            "peer_statistics": len(peer_stats),
+            "pending_latency_samples": sum(
+                len(stats._pending_requests) for stats in peer_stats.values()
+            ),
+        }
         query = getattr(exchange, "provider_query_manager", None)
         if query is not None:
             counts["bitswap_provider_cache"] = query.cache.stats()

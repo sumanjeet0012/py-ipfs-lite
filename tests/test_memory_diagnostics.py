@@ -92,3 +92,45 @@ def test_transport_owners_count_closed_connections_with_both_interfaces():
         },
         "QUICTransport": {"tracked_connections": 1, "closed_tracked_connections": 0},
     }
+
+
+def test_bitswap_request_counters_expose_retained_latency_samples():
+    client = SimpleNamespace(
+        _message_queues={},
+        sim=SimpleNamespace(_interests={}),
+        _wantlist={"cid": {}},
+        _broadcast_wants={"cid"},
+        peer_manager=SimpleNamespace(
+            peers={"one": SimpleNamespace(_pending_requests={"a": 1, "b": 2})}
+        ),
+    )
+    result = retention_counts(
+        SimpleNamespace(_exchange=client), SimpleNamespace(notifees=[])
+    )
+    assert result["bitswap_request_state"] == {
+        "wants": 1,
+        "broadcast_wants": 1,
+        "peer_statistics": 1,
+        "pending_latency_samples": 2,
+    }
+
+
+def test_scorer_diagnostics_detect_stale_subnet_membership_without_mutation():
+    from libp2p.peer.id import ID
+    from libp2p.pubsub.score import PeerScorer, ScoreParams
+
+    scorer = PeerScorer(ScoreParams())
+    peer = ID(b"remote")
+    scorer.add_peer_ip(peer, "10.0.0.1")
+    scorer.subnet_tracking["10.1.0"].add(peer)
+    gossip = SimpleNamespace(back_off={}, scorer=scorer)
+    result = retention_counts(
+        SimpleNamespace(_gossipsub=gossip), SimpleNamespace(notifees=[])
+    )
+    assert result["gossipsub_scoring"] == {
+        "ip_peers": 1,
+        "subnets": 2,
+        "subnet_memberships": 2,
+        "stale_subnet_memberships": 1,
+    }
+    assert scorer.subnet_tracking["10.1.0"] == {peer}

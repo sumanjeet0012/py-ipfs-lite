@@ -129,3 +129,10 @@ a proof that every native dependency and optional transport is leak-free.
 The follow-up WebSocket regression covers close acknowledgement deadlock: keep
 the private reader alive during local close and bound the handshake by the
 configured close timeout, including unresponsive peers.
+
+Further regressions cover IP changes leaving obsolete GossipSub subnet
+memberships, HAVE probes failing/cancelling during setup and leaving wants,
+and cancelled Bitswap wants leaving pending per-peer latency samples. Live
+diagnostics report subnet memberships versus current peer IPs and Bitswap
+wants/pending latency samples. These defects reproduce in isolation; their
+share of production RSS growth is not established.
