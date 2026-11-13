@@ -1,0 +1,1409 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Embeddable lightweight IPFS peer for Python">
+      
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+    
+    
+      
+        <title>Memory active paths - py-ipfs-lite</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="py-ipfs-lite" class="md-header__button md-logo" aria-label="py-ipfs-lite" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            py-ipfs-lite
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Memory active paths
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/IPFS-Meshkit/py-ipfs-lite" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    IPFS-Meshkit/py-ipfs-lite
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../architecture/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../comparison/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Comparison
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../tutorials/01-your-first-peer/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Tutorials
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../guides/ai-agents-and-rag/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../reference/cli/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="py-ipfs-lite" class="md-nav__button md-logo" aria-label="py-ipfs-lite" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    py-ipfs-lite
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/IPFS-Meshkit/py-ipfs-lite" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    IPFS-Meshkit/py-ipfs-lite
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparison
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/01-your-first-peer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial 01: Your First Peer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/02-running-a-daemon/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial 02: Running a Daemon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/ai-agents-and-rag/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Agents and RAG with py-ipfs-lite
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/car-files-and-filecoin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CAR Files and Filecoin
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/dht-and-routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DHT and Routing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/http-api-daemon/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HTTP API Daemon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/interop-with-kubo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interoperability with Kubo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/ipns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IPNS — Mutable Names over Immutable CIDs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Observability
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/persistence-and-gc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Persistence and Garbage Collection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/production-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/streaming-large-files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Streaming Large Files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/examples-index/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples Index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/http-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HTTP API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/python-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python SDK Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+  <h1>Memory active paths</h1>
+
+<p>Production memory audit: modules enabled by py-ipfs-lite</p>
+<p>The daemon constructs its network in <code>py_ipfs_lite/peer/_hostfactory.py</code>, starts
+services in <code>_lifecycle.py</code>, configures pubsub in <code>_pubsub.py</code>, and sends
+keepalive pings from <code>_maintenance.py</code>. The production command is <code>daemon --api
+--api-host 0.0.0.0</code>; its environment enables pubsub, disables topic auto-join,
+and sets connection watermarks to 300/500. The advertised transports are TCP,
+WebSocket and QUIC. A full direct-import inventory is retained separately in
+the local investigation artifacts; imports alone do not prove a feature is
+enabled.</p>
+<table>
+<thead>
+<tr>
+<th>Active path</th>
+<th>libp2p modules reached</th>
+<th>Memory ownership reviewed</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Host and connection management</td>
+<td><code>host/basic_host</code>, <code>network/swarm</code>, <code>network/auto_connector</code>, <code>network/tag_store</code>, <code>rcmgr</code></td>
+<td>Connection registration, background tasks, dial/disconnect history, tags, resource scopes</td>
+<td>Bound recent dial diagnostics; expire disconnect streaks; prune even above target; remove empty unowned tags</td>
+</tr>
+<tr>
+<td>TCP and WebSocket</td>
+<td><code>transport/tcp</code>, <code>transport/websocket</code>, <code>security/noise</code>, <code>stream_muxer/yamux</code>, <code>stream_muxer/mplex</code>, <code>network/stream</code></td>
+<td>Stream dictionaries, buffered data, half-close lifecycle, connection cleanup</td>
+<td>Yamux is preferred and Mplex is the negotiated compatibility fallback. Remove Mplex channel entries on graceful completion in either close order and on local reset; intentional write half-close preserved</td>
+</tr>
+<tr>
+<td>QUIC</td>
+<td><code>transport/quic</code>, <code>aioquic</code></td>
+<td>Wrapper and native stream registries, connection-ID routing, pending handshakes</td>
+<td>Bridge passive transport termination to the outer NetStream/SwarmConn owner and release stream credits. FIN completion preserves buffered replies; late callback registration handles reset during opened notifications</td>
+</tr>
+<tr>
+<td>Identity and address observations</td>
+<td><code>identity/identify</code>, <code>identity/identify_push</code>, <code>host/observed_addr_manager</code></td>
+<td>Per-peer identify tasks, connection observations, address cache</td>
+<td>Disconnect cleanup and weak connection observations inspected; no new unbounded owner reproduced in this pass</td>
+</tr>
+<tr>
+<td>Persistent peerstore</td>
+<td><code>peer/persistent/sync/peerstore</code>, <code>datastore/sqlite_sync</code></td>
+<td>In-memory peer/record caches versus on-disk discovered peers</td>
+<td>In-memory caches capped at 1,000; preserve address TTL across cache eviction/reopen and persist deletion of cleared fields so stale records cannot reload. Record-size counters supplement cache counts; total persisted peers are not full in-memory records</td>
+</tr>
+<tr>
+<td>Server-mode DHT and random walk</td>
+<td><code>kad_dht/kad_dht</code>, <code>routing_table</code>, <code>peer_routing</code>, <code>provider_store</code>, <code>value_store</code>, <code>discovery/random_walk</code></td>
+<td>Bucket eviction, one-shot pings, tags, provider/value records and lookup tasks</td>
+<td>Prior PingService disposal retained; DHT tag removal now releases empty records. Remote provider/value stores have explicit size/expiry mechanisms; locally provided keys remain intentional node state</td>
+</tr>
+<tr>
+<td>Bitswap and UnixFS/DAG</td>
+<td><code>bitswap/client</code>, <code>message_queue</code>, <code>session</code>, <code>sim</code>, <code>presence</code>, <code>provider_query</code>, <code>block_store</code>, <code>dag</code></td>
+<td>Queues per connected peer, session interests, provider cache, presence TTL, file buffers</td>
+<td>Existing queue disconnect cleanup and session-interest removal inspected. Provider cache capped at 1,000 CIDs; file buffers are request-owned. No new Bitswap leak reproduced in this pass</td>
+</tr>
+<tr>
+<td>GossipSub</td>
+<td><code>pubsub/pubsub</code>, <code>gossipsub</code>, <code>score</code>, <code>mcache</code></td>
+<td>Peer queues, scores, message cache, rate state and backoff maps</td>
+<td>Expire departed peers' backoff during heartbeat; preserve bans until their deadline</td>
+</tr>
+<tr>
+<td>Metrics and service lifecycle</td>
+<td><code>events/bus</code>, <code>metrics</code>, <code>tools/anyio_service</code></td>
+<td>Listener lifetime, error tracebacks, service task ownership</td>
+<td>DHT temporary listeners fixed previously; ownership counts exposed for live verification</td>
+</tr>
+<tr>
+<td>Naming and content codecs</td>
+<td>IPNS records, protobuf/DAG codecs, crypto/signatures</td>
+<td>Operation-local decoded blocks and records</td>
+<td>Used on demand; no new background retention owner reproduced</td>
+</tr>
+</tbody>
+</table>
+<p>The current deployment does not enable mDNS, delegated HTTP routing/IPNI,
+WebRTC, WebTransport or AutoTLS. Optional resource-manager per-service limits
+and fixed/sliding-window rate-limiter variants are not configured by the
+normal startup path. Previously reproduced bugs specific to those optional
+configurations are excluded from this deployment's remediation scope.</p>
+<p>The connection diagnostic <code>unique_dialed</code> now reports distinct peers in the
+bounded, recent 30-minute dial history (maximum 4,096 tracked peers), rather
+than retaining exact lifetime distinct identities. The log labels it
+<code>recent_unique_dialed</code>. Cumulative outcome counters remain cumulative.
+Disconnect streaks expire after the existing 15-minute offense-decay period;
+live quarantine deadlines are preserved. Tracking tables are pruned at most
+every 30 seconds, including when no dialing is needed.</p>
+<p>Native memory is a separate layer. The production image now uses the
+jemalloc-supported <code>MALLOC_CONF</code> variable, with four arenas, background
+purging and one-second dirty/muzzy decay. The prior <code>JEMALLOC_CONF</code> was ignored.
+The debug memory endpoint exposes native allocated/active/resident/retained
+bytes and effective options, plus live ownership counts. It no longer treats
+glibc malloc_trim as a jemalloc purge. The endpoint still performs Python GC
+and an object scan, so regular RSS measurements are taken before scans.</p>
+<p>Validation and comparison use the same API, node identity, persistent volume,
+ports and connection watermarks. Compare warmed-up intervals and report peer
+counts, CPU and file descriptors alongside RSS; a drop caused merely by
+restarting a process is not evidence of a reduced growth rate. Since both
+library retention fixes and allocator settings change in this deployment,
+the observed effect belongs to the combined change, not an isolated causal
+estimate for any one fix.</p>
+<p>Residual stream ownership found during overnight monitoring</p>
+<p>After the first rollout, matched 30-minute windows showed RSS growth of 0.243
+versus 0.169 MiB/min (about 30% lower), with similar mean connection counts
+(427 versus 422). The next two hours still grew at 0.132 MiB/min. This is
+evidence of improvement, not evidence that retention stopped.</p>
+<p>The two-hour and overnight heap snapshots showed QUICStream objects growing
+from 2,829 to 9,583, NetStream from 3,227 to 10,025, and Mplex StreamID objects
+from 2,268 to 7,027. Mplex retained send-channel entries after removing fully
+closed streams from its other registry. QUIC remote reset removed transport
+ownership but left outbound NetStream wrappers in SwarmConn.streams; there is
+no inbound-handler finally block for outbound streams. Repeated streams on a
+long-lived connection therefore accumulated even when ping caches held only
+one current stream per peer. Both paths reproduce in offline regression tests. Live ownership counters then caught the same Mplex channel omission on local reset; its cleanup now also runs if reset transmission is cancelled.</p>
+<p>The lightweight endpoint now reports registry counts by transport, including
+closed network wrappers and Mplex orphan channel entries. Track these with
+RSS and allocator allocated bytes; process restart alone cannot validate a fix.</p>
+<p>Persistent peerstore follow-up</p>
+<p>The sync store previously saved only nonempty fields and did not persist
+<code>ttl</code>/<code>last_identified</code>. After an LRU eviction, expired addresses reloaded as
+permanent (the PeerData default), and explicitly cleared addresses, protocols
+or metadata reappeared from their old disk values. Regression tests reproduce
+both memory and SQLite backends, cache eviction, and SQLite reopen. Optional
+expiry metadata is now persisted, and empty fields delete their prior stored
+values. Unchanged fields are not rewritten. Legacy records without timestamps
+retain their prior behavior, and explicit TTL zero remains permanent. This
+preserves the existing per-peer TTL model; per-address expiry is not introduced.</p>
+<p>A read-only production scan found 35,946 protocol records with no duplicate
+protocols (maximum 49 protocols per record), ruling out protocol append as an
+active source: Identify clears the prior protocol list before adding it. An
+address scan found 38,551 records, a maximum count of 4,160 addresses, and a
+largest serialized record of 213,889 bytes (2,614 addresses in that record).
+About 25 MB of address data is serialized across all peers on disk. Those
+are persisted sizes, not measured resident cache sizes. Cached address counts
+and largest cached records are exposed to test their relationship with RSS.</p>
+<p>The lightweight readings also include Python allocated blocks and the total /
+largest cached signed-record payload sizes. These are observational counters;
+they do not enable allocation tracing or change garbage collection policy.</p>
+<p>WebSocket transport ownership follow-up</p>
+<p>Outbound WebSocket connections were inserted into <code>_connections</code>, but its
+removal method had no callers. Closing a wrapper, observing remote EOF, or
+cancelling close left both a strong reference and a consumed connection slot.
+Also, cancelling the dialer while its private background handshake was running
+did not cancel that background task/socket. Close callbacks now release tracking
+and capacity, private reader termination closes/untracks its wrapper, and an
+abandoned dial cancels its private scope. Registration failure/cancellation
+closes the connected wrapper; already-closed wrappers are rejected. Regression
+tests reproduce all these ownership transitions, including 100 close cycles
+with a one-connection limit. Live transport registry counts are exposed to
+verify the fix under the actual WS/WSS workload. The uninstrumented previous
+process cannot establish this path's quantitative share of RSS growth.</p>
+<p>Broader retention follow-up</p>
+<p>The next library revision also cleans timed-out PubSub readiness waiters,
+deduplicates repeated protocol-book additions, bounds all rate-limiter entity
+strategies, removes zero scoped-resource counters on release and rollback,
+bounds QUIC CID diagnostic histories/histograms, and cancels each Bitswap
+fetch's private provider-discovery worker when that fetch exits. Regression
+coverage includes shared waiters and concurrent live resource owners, so
+cleanup does not discard another operation's state. See the library's
+<code>docs/memory_retention_audit.md</code> for reproduced cases and diagnostic changes.
+These fixes include optional APIs not enabled by the production node and are
+not all claimed as causes of its measured RSS growth. They do not constitute
+a proof that every native dependency and optional transport is leak-free.</p>
+<p>The follow-up WebSocket regression covers close acknowledgement deadlock: keep
+the private reader alive during local close and bound the handshake by the
+configured close timeout, including unresponsive peers.</p>
+<p>Further regressions cover IP changes leaving obsolete GossipSub subnet
+memberships, HAVE probes failing/cancelling during setup and leaving wants,
+and cancelled Bitswap wants leaving pending per-peer latency samples. Live
+diagnostics report subnet memberships versus current peer IPs and Bitswap
+wants/pending latency samples. These defects reproduce in isolation; their
+share of production RSS growth is not established.</p>
+<p>Final active-path audit: expire GossipSub connection and delivery histories on
+every heartbeat, including when there are no mesh topics; release expired
+fanout/publish topic keys; remove DHT value republish metadata on deletion,
+expiry and eviction. Diagnostics expose gossip history counts. The release
+also includes the remote branch's upstream TCP/QUIC cancellation and DHT
+protocol-prefix updates, which were integrated without overwriting that work.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+    
+  </body>
+</html>
