@@ -136,3 +136,10 @@ and cancelled Bitswap wants leaving pending per-peer latency samples. Live
 diagnostics report subnet memberships versus current peer IPs and Bitswap
 wants/pending latency samples. These defects reproduce in isolation; their
 share of production RSS growth is not established.
+
+Final active-path audit: expire GossipSub connection and delivery histories on
+every heartbeat, including when there are no mesh topics; release expired
+fanout/publish topic keys; remove DHT value republish metadata on deletion,
+expiry and eviction. Diagnostics expose gossip history counts. The release
+also includes the remote branch's upstream TCP/QUIC cancellation and DHT
+protocol-prefix updates, which were integrated without overwriting that work.

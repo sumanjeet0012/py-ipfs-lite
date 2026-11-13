@@ -117,6 +117,16 @@ def retention_counts(peer: Any, network: Any) -> dict[str, Any]:
         counts["gossipsub_backoff_peers"] = sum(
             len(v) for v in gossip.back_off.values()
         )
+        counts["gossipsub_histories"] = {
+            "connections": len(getattr(gossip, "recent_peer_connections", ())),
+            "disconnections": len(getattr(gossip, "recent_peer_disconnections", ())),
+            "delivery_topics": len(getattr(gossip, "recent_message_deliveries", {})),
+            "delivery_timestamps": sum(
+                len(v) for v in getattr(gossip, "recent_message_deliveries", {}).values()
+            ),
+            "publish_topics": len(getattr(gossip, "time_since_last_publish", {})),
+            "fanout_topics": len(getattr(gossip, "fanout", {})),
+        }
         scorer = getattr(gossip, "scorer", None)
         if scorer is not None:
             subnets = scorer.subnet_tracking
