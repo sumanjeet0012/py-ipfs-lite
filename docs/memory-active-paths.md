@@ -125,3 +125,7 @@ cleanup does not discard another operation's state. See the library's
 These fixes include optional APIs not enabled by the production node and are
 not all claimed as causes of its measured RSS growth. They do not constitute
 a proof that every native dependency and optional transport is leak-free.
+
+The follow-up WebSocket regression covers close acknowledgement deadlock: keep
+the private reader alive during local close and bound the handshake by the
+configured close timeout, including unresponsive peers.
