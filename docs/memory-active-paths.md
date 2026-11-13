@@ -96,3 +96,18 @@ and largest cached records are exposed to test their relationship with RSS.
 The lightweight readings also include Python allocated blocks and the total /
 largest cached signed-record payload sizes. These are observational counters;
 they do not enable allocation tracing or change garbage collection policy.
+
+WebSocket transport ownership follow-up
+
+Outbound WebSocket connections were inserted into `_connections`, but its
+removal method had no callers. Closing a wrapper, observing remote EOF, or
+cancelling close left both a strong reference and a consumed connection slot.
+Also, cancelling the dialer while its private background handshake was running
+did not cancel that background task/socket. Close callbacks now release tracking
+and capacity, private reader termination closes/untracks its wrapper, and an
+abandoned dial cancels its private scope. Registration failure/cancellation
+closes the connected wrapper; already-closed wrappers are rejected. Regression
+tests reproduce all these ownership transitions, including 100 close cycles
+with a one-connection limit. Live transport registry counts are exposed to
+verify the fix under the actual WS/WSS workload. The uninstrumented previous
+process cannot establish this path's quantitative share of RSS growth.

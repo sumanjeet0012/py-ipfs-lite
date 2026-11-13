@@ -66,3 +66,29 @@ def test_peerstore_reports_record_sizes_as_well_as_cache_capacity():
         "signed_payload_bytes": 3,
         "max_signed_payload_bytes": 3,
     }
+
+
+def test_transport_owners_count_closed_connections_with_both_interfaces():
+    class WebsocketTransport:
+        _connections = {
+            "live": SimpleNamespace(is_closed=lambda: False),
+            "closed": SimpleNamespace(is_closed=lambda: True),
+        }
+
+    class QUICTransport:
+        _connections = {"live": SimpleNamespace(is_closed=False)}
+
+    network = SimpleNamespace(
+        notifees=[],
+        transport_manager=SimpleNamespace(
+            get_transports=lambda: [WebsocketTransport(), QUICTransport()]
+        ),
+    )
+    result = retention_counts(SimpleNamespace(), network)
+    assert result["transport_owners"] == {
+        "WebsocketTransport": {
+            "tracked_connections": 2,
+            "closed_tracked_connections": 1,
+        },
+        "QUICTransport": {"tracked_connections": 1, "closed_tracked_connections": 0},
+    }

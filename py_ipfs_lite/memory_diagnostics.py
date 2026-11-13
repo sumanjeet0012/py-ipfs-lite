@@ -15,6 +15,22 @@ def retention_counts(peer: Any, network: Any) -> dict[str, Any]:
     }
     if hasattr(sys, "getallocatedblocks"):
         counts["python_allocated_blocks"] = sys.getallocatedblocks()
+    manager = getattr(network, "transport_manager", None)
+    get_transports = getattr(manager, "get_transports", None)
+    if callable(get_transports):
+        transport_owners = {}
+        for transport in get_transports():
+            connections = getattr(transport, "_connections", None)
+            if isinstance(connections, dict):
+                closed = 0
+                for connection in connections.values():
+                    is_closed = getattr(connection, "is_closed", False)
+                    closed += bool(is_closed() if callable(is_closed) else is_closed)
+                transport_owners[type(transport).__name__] = {
+                    "tracked_connections": len(connections),
+                    "closed_tracked_connections": closed,
+                }
+        counts["transport_owners"] = transport_owners
     stream_owners: dict[str, Any] = {}
     for connections in getattr(network, "connections", {}).values():
         for connection in connections:

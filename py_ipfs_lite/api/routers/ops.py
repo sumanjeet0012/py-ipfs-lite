@@ -122,7 +122,7 @@ async def debug_memory(request: Request) -> Any:
             if hasattr(raw_swarm, "transport_manager"):
                 tm = raw_swarm.transport_manager
                 subsystems["transports"] = [
-                    type(t).__name__ for t in getattr(tm, "transports", {}).values()
+                    type(t).__name__ for t in tm.get_transports()
                 ]
     except Exception as e:
         subsystems["swarm_err"] = str(e)
