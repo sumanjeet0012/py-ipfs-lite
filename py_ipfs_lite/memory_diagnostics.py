@@ -40,6 +40,26 @@ def retention_counts(peer: Any, network: Any) -> dict[str, Any]:
                 sid not in registry for sid in channels
             )
     counts["stream_owners"] = stream_owners
+    host = getattr(peer, "host", None)
+    raw_host = getattr(host, "_host", host)
+    get_peerstore = getattr(raw_host, "get_peerstore", None)
+    if callable(get_peerstore):
+        store = get_peerstore()
+        cache = getattr(store, "peer_data_map", None)
+        if isinstance(cache, dict):
+            records = [record for record in cache.values() if record is not None]
+            address_counts = [len(record.addrs) for record in records]
+            counts["peerstore_cache"] = {
+                "peers": len(records),
+                "capacity": getattr(store, "max_cached_peers", None),
+                "address_entries": sum(address_counts),
+                "max_addresses_per_peer": max(address_counts, default=0),
+                "protocol_entries": sum(len(record.protocols) for record in records),
+                "permanent_or_legacy_records": sum(
+                    record.ttl == 0 for record in records
+                ),
+                "signed_records": len(getattr(store, "peer_record_map", {})),
+            }
     connector = getattr(network, "auto_connector", None)
     if connector is not None:
         counts["auto_connector"] = {

@@ -15,7 +15,7 @@ enabled.
 | TCP and WebSocket | `transport/tcp`, `transport/websocket`, `security/noise`, `stream_muxer/yamux`, `stream_muxer/mplex`, `network/stream` | Stream dictionaries, buffered data, half-close lifecycle, connection cleanup | Yamux is preferred and Mplex is the negotiated compatibility fallback. Remove Mplex channel entries on graceful completion in either close order and on local reset; intentional write half-close preserved |
 | QUIC | `transport/quic`, `aioquic` | Wrapper and native stream registries, connection-ID routing, pending handshakes | Bridge passive transport termination to the outer NetStream/SwarmConn owner and release stream credits. FIN completion preserves buffered replies; late callback registration handles reset during opened notifications |
 | Identity and address observations | `identity/identify`, `identity/identify_push`, `host/observed_addr_manager` | Per-peer identify tasks, connection observations, address cache | Disconnect cleanup and weak connection observations inspected; no new unbounded owner reproduced in this pass |
-| Persistent peerstore | `peer/persistent/sync/peerstore`, `datastore/sqlite_sync` | In-memory peer/record caches versus on-disk discovered peers | In-memory caches capped at 1,000; total persisted peer count is not a count of full in-memory records |
+| Persistent peerstore | `peer/persistent/sync/peerstore`, `datastore/sqlite_sync` | In-memory peer/record caches versus on-disk discovered peers | In-memory caches capped at 1,000; preserve address TTL across cache eviction/reopen and persist deletion of cleared fields so stale records cannot reload. Record-size counters supplement cache counts; total persisted peers are not full in-memory records |
 | Server-mode DHT and random walk | `kad_dht/kad_dht`, `routing_table`, `peer_routing`, `provider_store`, `value_store`, `discovery/random_walk` | Bucket eviction, one-shot pings, tags, provider/value records and lookup tasks | Prior PingService disposal retained; DHT tag removal now releases empty records. Remote provider/value stores have explicit size/expiry mechanisms; locally provided keys remain intentional node state |
 | Bitswap and UnixFS/DAG | `bitswap/client`, `message_queue`, `session`, `sim`, `presence`, `provider_query`, `block_store`, `dag` | Queues per connected peer, session interests, provider cache, presence TTL, file buffers | Existing queue disconnect cleanup and session-interest removal inspected. Provider cache capped at 1,000 CIDs; file buffers are request-owned. No new Bitswap leak reproduced in this pass |
 | GossipSub | `pubsub/pubsub`, `gossipsub`, `score`, `mcache` | Peer queues, scores, message cache, rate state and backoff maps | Expire departed peers' backoff during heartbeat; preserve bans until their deadline |
@@ -71,3 +71,23 @@ one current stream per peer. Both paths reproduce in offline regression tests. L
 The lightweight endpoint now reports registry counts by transport, including
 closed network wrappers and Mplex orphan channel entries. Track these with
 RSS and allocator allocated bytes; process restart alone cannot validate a fix.
+
+Persistent peerstore follow-up
+
+The sync store previously saved only nonempty fields and did not persist
+`ttl`/`last_identified`. After an LRU eviction, expired addresses reloaded as
+permanent (the PeerData default), and explicitly cleared addresses, protocols
+or metadata reappeared from their old disk values. Regression tests reproduce
+both memory and SQLite backends, cache eviction, and SQLite reopen. Optional
+expiry metadata is now persisted, and empty fields delete their prior stored
+values. Unchanged fields are not rewritten. Legacy records without timestamps
+retain their prior behavior, and explicit TTL zero remains permanent. This
+preserves the existing per-peer TTL model; per-address expiry is not introduced.
+
+A read-only production scan found 35,946 protocol records with no duplicate
+protocols (maximum 49 protocols per record), ruling out protocol append as an
+active source: Identify clears the prior protocol list before adding it. An
+address scan found 38,551 records, maximum 4,160 addresses / 213,889 serialized
+bytes for one peer, and about 25 MB serialized across all peers on disk. Those
+are persisted sizes, not measured resident cache sizes. Cached address counts
+and largest cached records are exposed to test their relationship with RSS.
