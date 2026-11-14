@@ -177,6 +177,19 @@ class TieredRouting:
                 pass
         return success
 
+    async def unprovide(self, key: str) -> bool:
+        success = False
+        for r in self.routers:
+            unprovide = getattr(r, "unprovide", None)
+            if unprovide is None:
+                continue
+            try:
+                if await unprovide(key):
+                    success = True
+            except Exception:
+                pass
+        return success
+
     async def get_value(self, key: str) -> bytes | None:
         for r in self.routers:
             try:

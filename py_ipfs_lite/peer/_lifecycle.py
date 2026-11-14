@@ -280,11 +280,27 @@ class LifecycleMixin:
                 except Exception as e:
                     logger.debug(f"Error stopping reprovider: {e}")
 
+                # BootstrapDiscovery owns an untracked system task; stop it
+                # explicitly or it outlives the Peer nursery.
+                if self._bootstrap_discovery is not None:
+                    try:
+                        self._bootstrap_discovery.stop()
+                    except Exception as e:
+                        logger.debug(f"Error stopping bootstrap discovery: {e}")
+                    self._bootstrap_discovery = None
+
                 if self._exchange:
                     try:
                         await self._exchange.stop()  # type: ignore[union-attr]
                     except Exception as e:
                         logger.debug(f"Error stopping exchange: {e}")
+
+                if self._ping_service is not None:
+                    try:
+                        await self._ping_service.aclose()
+                    except Exception as e:
+                        logger.debug(f"Error closing ping service: {e}")
+                    self._ping_service = None
 
                 if self.routing and hasattr(self.routing, "close"):
                     try:
@@ -292,7 +308,18 @@ class LifecycleMixin:
                     except Exception as e:
                         logger.debug(f"Error closing routing: {e}")
 
+                if self.connection_tracker is not None:
+                    try:
+                        raw_host = getattr(self.host, "_host", self.host)
+                        raw_host.get_network().remove_notifee(self.connection_tracker)
+                    except Exception as e:
+                        logger.debug(f"Error unregistering connection tracker: {e}")
+                    self.connection_tracker = None
+
                 self._pubsub_subscriptions.clear()
+                self._pubsub_messages.clear()
+                self._topic_stats.clear()
+                self._auto_joined_topics.clear()
 
             if hasattr(self, "_nursery") and self._nursery:
                 self._nursery.cancel_scope.cancel()
@@ -338,6 +365,15 @@ class LifecycleMixin:
             bootstrap_addrs=str_addrs,  # type: ignore[union-attr]
             event_bus=self.host.get_event_bus(),
         )
+        # Track it so close() can cancel the reconnect system task. If a
+        # previous discovery is still running, stop it first (repeated
+        # bootstrap() calls must not accumulate reconnect loops).
+        if self._bootstrap_discovery is not None:
+            try:
+                self._bootstrap_discovery.stop()
+            except Exception as e:
+                logger.debug(f"Error stopping previous bootstrap discovery: {e}")
+        self._bootstrap_discovery = discovery
         await discovery.start()
 
         # Best-effort routing-table refresh: when the bootstrap peer returns an

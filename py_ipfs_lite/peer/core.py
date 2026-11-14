@@ -91,6 +91,7 @@ class Peer(
         self._connection_pruner = None
         self._inflight_pings: set[Any] = set()
         self._ping_service: Any = None
+        self._bootstrap_discovery: Any = None
         self._last_good_peer: Any | None = None
 
         # Pubsub/GossipSub

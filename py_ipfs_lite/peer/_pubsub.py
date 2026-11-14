@@ -230,8 +230,19 @@ class PubsubMixin:
                     logger.debug(f"Error unsubscribing from {topic}: {e}")
                 self._auto_joined_topics.discard(topic)
                 self._topic_stats.pop(topic, None)
+                self._pubsub_messages.pop(topic, None)
                 left += 1
                 logger.info(f"Pubsub auto-left stale topic {topic}")
+
+        # Topics that never reached the join threshold (or were skipped by the
+        # auto-join cap) are not in _pubsub_subscriptions, so the leave pass
+        # above never visits them.  Without this sweep every topic name ever
+        # announced would remain in _topic_stats for the process lifetime.
+        for topic, st in list(self._topic_stats.items()):
+            if topic in self._pubsub_subscriptions:
+                continue
+            if st["misses"] >= leave_after:
+                self._topic_stats.pop(topic, None)
 
         joined = 0
         candidates = sorted(
@@ -320,6 +331,10 @@ class PubsubMixin:
     async def _pubsub_receive_loop(self, topic: str, subscription: Any) -> None:
         """Receive loop for the given pubsub topic."""
         logger.debug(f"Starting pubsub receive loop for {topic}")
+        # The topic may have been auto-left between scheduling this task and
+        # its first step. Do not recreate a message buffer for it.
+        if self._pubsub_subscriptions.get(topic) is not subscription:
+            return
         buffer = self._pubsub_messages.setdefault(topic, collections.deque(maxlen=100))
         while self._state == PeerState.RUNNING:
             try:

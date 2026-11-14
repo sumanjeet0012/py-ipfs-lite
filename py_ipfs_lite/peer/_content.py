@@ -382,6 +382,12 @@ class ContentMixin:
         cid_str = _to_cid_str(cid)
         parsed = parse_cid(cid_str)
         await self.blockstore.delete(cid_to_bytes(parsed))  # type: ignore[union-attr]
+        routing = self.routing
+        if routing is not None and hasattr(routing, "unprovide"):
+            try:
+                await routing.unprovide(cid_str)
+            except Exception as e:
+                logger.debug(f"Failed to unprovide {cid_str}: {e}")
 
     # ── ipld.DAGService interface ──────────────────────────────────────────
 
@@ -495,9 +501,15 @@ class ContentMixin:
 
             to_delete = all_cids - reachable_cids
             deleted_count = 0
+            routing = self.routing
             for c_str in to_delete:
                 await self.blockstore.delete(cid_to_bytes(parse_cid(c_str)))  # type: ignore[union-attr]
                 deleted_count += 1
+                if routing is not None and hasattr(routing, "unprovide"):
+                    try:
+                        await routing.unprovide(c_str)
+                    except Exception as e:
+                        logger.debug(f"Failed to unprovide {c_str}: {e}")
 
             IPFS_GC_RECLAIMED_BLOCKS_TOTAL.inc(deleted_count)
             return GCResult(

@@ -444,6 +444,91 @@ async def test_peer_close_closes_routing(memory_config):
 
 
 @pytest.mark.trio
+async def test_peer_close_stops_bootstrap_and_auxiliary_state(memory_config):
+    peer = Peer(memory_config, listen_addrs=["/ip4/127.0.0.1/tcp/0"])
+    await peer.start()
+
+    class FakeBootstrap:
+        stopped = False
+
+        def stop(self):
+            self.stopped = True
+
+    class FakePing:
+        closed = False
+
+        async def aclose(self):
+            self.closed = True
+
+    bootstrap = FakeBootstrap()
+    ping = FakePing()
+    peer._bootstrap_discovery = bootstrap
+    peer._ping_service = ping
+    peer._pubsub_messages["topic"] = __import__("collections").deque([1, 2])
+    peer._topic_stats["topic"] = {"messages": 2}
+    peer._auto_joined_topics.add("topic")
+
+    await peer.close()
+
+    assert bootstrap.stopped is True
+    assert ping.closed is True
+    assert peer._pubsub_messages == {}
+    assert peer._topic_stats == {}
+    assert peer._auto_joined_topics == set()
+
+
+@pytest.mark.trio
+async def test_remove_node_unprovides_content(memory_config):
+    peer = Peer(memory_config, listen_addrs=["/ip4/127.0.0.1/tcp/0"])
+    await peer.start()
+
+    cid_str = await peer.add_node({"msg": "remove-me"}, codec="dag-json")
+
+    class RecordingRouting:
+        def __init__(self):
+            self.unprovided = []
+
+        async def unprovide(self, key):
+            self.unprovided.append(key)
+            return True
+
+    recording = RecordingRouting()
+    peer.routing = recording
+
+    await peer.remove_node(cid_str)
+
+    assert recording.unprovided == [str(cid_str)]
+    await peer.close()
+
+
+@pytest.mark.trio
+async def test_gc_unprovides_reclaimed_content(memory_config):
+    peer = Peer(memory_config, listen_addrs=["/ip4/127.0.0.1/tcp/0"])
+    await peer.start()
+
+    pinned = await peer.add_node({"msg": "pinned"}, codec="dag-json")
+    reclaimed = await peer.add_node({"msg": "reclaimed"}, codec="dag-json")
+    await peer.add_pin(pinned, recursive=False)
+
+    class RecordingRouting:
+        def __init__(self):
+            self.unprovided = []
+
+        async def unprovide(self, key):
+            self.unprovided.append(key)
+            return True
+
+    recording = RecordingRouting()
+    peer.routing = recording
+
+    await peer.gc()
+
+    assert str(reclaimed) in recording.unprovided
+    assert str(pinned) not in recording.unprovided
+    await peer.close()
+
+
+@pytest.mark.trio
 async def test_peer_context_manager(memory_config):
     peer = Peer(memory_config, listen_addrs=["/ip4/127.0.0.1/tcp/0"])
 

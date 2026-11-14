@@ -3,6 +3,7 @@ from libp2p.peer.id import ID
 from libp2p.peer.peerinfo import PeerInfo
 
 from py_ipfs_lite.exceptions import RoutingError
+from py_ipfs_lite.interfaces import RoutingAdapter
 from py_ipfs_lite.routing import DelegatedHTTPRouting, TieredRouting
 
 
@@ -59,7 +60,6 @@ async def test_tiered_routing():
 
 @pytest.mark.trio
 async def test_tiered_routing_put_value_failure():
-    from py_ipfs_lite.routing import TieredRouting
 
     class FailingRouter:
         async def put_value(self, key, value):
@@ -77,3 +77,47 @@ async def test_tiered_routing_put_value_failure():
     # Partial success swallows the failure and returns normally
     tiered_partial = TieredRouting([FailingRouter(), SuccessRouter()])
     await tiered_partial.put_value("test", b"data")  # Should not raise
+
+
+@pytest.mark.trio
+async def test_routing_adapter_delegates_unprovide_and_close():
+    class DummyRouting:
+        def __init__(self):
+            self.unprovided = []
+            self.stopped = False
+
+        def unprovide(self, key):
+            self.unprovided.append(key)
+            return True
+
+        async def stop(self):
+            self.stopped = True
+
+    raw = DummyRouting()
+    adapter = RoutingAdapter(raw)
+
+    assert await adapter.unprovide("cid") is True
+    assert raw.unprovided == ["cid"]
+
+    await adapter.close()
+    assert raw.stopped is True
+
+
+@pytest.mark.trio
+async def test_tiered_routing_delegates_unprovide():
+    class Router:
+        def __init__(self, result):
+            self.result = result
+            self.unprovided = []
+
+        async def unprovide(self, key):
+            self.unprovided.append(key)
+            return self.result
+
+    r1 = Router(True)
+    r2 = Router(False)
+    tiered = TieredRouting([r1, r2])
+
+    assert await tiered.unprovide("cid") is True
+    assert r1.unprovided == ["cid"]
+    assert r2.unprovided == ["cid"]

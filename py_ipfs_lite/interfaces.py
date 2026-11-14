@@ -1,3 +1,4 @@
+import inspect
 from collections.abc import AsyncIterator
 from typing import Any, Protocol
 
@@ -230,6 +231,26 @@ class RoutingAdapter:
     async def provide(self, key: str) -> bool:
         with IPFS_DHT_QUERY_LATENCY_SECONDS.time():
             return await self._routing.provide(key)
+
+    async def unprovide(self, key: str) -> bool:
+        """Forget the local provider record for *key*, if supported."""
+        unprovide = getattr(self._routing, "unprovide", None)
+        if unprovide is None:
+            return False
+        result = unprovide(key)
+        if inspect.isawaitable(result):
+            return bool(await result)
+        return bool(result)
+
+    async def close(self) -> None:
+        """Stop the wrapped routing service."""
+        close = getattr(self._routing, "close", None)
+        if close is not None:
+            await close()
+            return
+        stop = getattr(self._routing, "stop", None)
+        if stop is not None:
+            await stop()
 
     async def get_value(self, key: str | bytes) -> bytes | None:
         return await self._routing.get_value(key)
