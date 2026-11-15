@@ -117,6 +117,53 @@ class MaintenanceMixin:
             except Exception as e:
                 logger.debug(f"Keep-alive loop error: {e}")
 
+    async def _peerstore_maintenance_loop(self) -> None:
+        """
+        Drain legacy unbounded peerstore rows, then reclaim the freed pages.
+
+        The persistent peerstore bounds itself as it writes, but a database
+        produced by an older build can still hold tens of thousands of stale
+        peer rows.  Trim that backlog once at startup (off the event loop) and
+        compact the SQLite file so the freed space is returned to disk.
+        """
+        raw_host = getattr(self.host, "_host", self.host)
+        if raw_host is None:
+            return
+        try:
+            peerstore = raw_host.get_peerstore()
+        except Exception:
+            return
+
+        enforce = getattr(peerstore, "enforce_datastore_limit", None)
+        if enforce is None:
+            return
+
+        datastore = getattr(peerstore, "datastore", None)
+        compact = getattr(datastore, "compact", None)
+
+        def _trim_once() -> int:
+            removed = enforce()
+            if removed and compact is not None:
+                compact()
+            return removed
+
+        # Let host startup settle before touching the database from a thread.
+        await trio.sleep(3.0)
+
+        while True:
+            try:
+                removed = await trio.to_thread.run_sync(_trim_once)
+                if removed:
+                    logger.info(
+                        "Peerstore maintenance: removed %d stale peer records",
+                        removed,
+                    )
+            except Exception as e:
+                logger.warning("Peerstore maintenance failed (non-fatal): %s", e)
+            # The write-driven bound keeps the steady state; the periodic pass
+            # only reclaims pages freed since the last compaction.
+            await trio.sleep(6 * 3600)
+
     async def _memory_hygiene_loop(self) -> None:
         """
         Reconcile dead connections and return freed heap to the OS.
@@ -160,13 +207,19 @@ class MaintenanceMixin:
 
             try:
                 ps = getattr(self, "_ping_service", None)
-                if ps is not None and hasattr(ps, "_outbound_streams") and hasattr(ps, "_lock"):
+                if (
+                    ps is not None
+                    and hasattr(ps, "_outbound_streams")
+                    and hasattr(ps, "_lock")
+                ):
                     async with ps._lock:
                         for pid, stream in list(ps._outbound_streams.items()):
                             is_closed = getattr(stream, "is_closed", False)
                             if callable(is_closed):
                                 is_closed = is_closed()
-                            if is_closed or getattr(getattr(stream, "swarm_conn", None), "is_closed", False):
+                            if is_closed or getattr(
+                                getattr(stream, "swarm_conn", None), "is_closed", False
+                            ):
                                 ps._outbound_streams.pop(pid, None)
             except Exception as e:
                 logger.debug(f"Memory hygiene ping stream prune error: {e}")

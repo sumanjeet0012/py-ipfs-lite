@@ -51,9 +51,77 @@ except ImportError:
 
 logger = logging.getLogger("py_ipfs_lite.peer")
 
+# A DHT provide is a full iterative walk (closest-peer lookups followed by
+# ADD_PROVIDER RPCs) that can take up to 90 s on a cold node.  Bulk imports
+# used to start one walk per added block, all racing each other.  These caps
+# keep the background announce work bounded; anything dropped is re-announced
+# by the periodic reprovider, which re-provides every stored block.
+MAX_CONCURRENT_PROVIDES = 4
+MAX_PENDING_PROVIDES = 512
+
 
 class ContentMixin:
     """Mixed into :class:`py_ipfs_lite.peer.core.Peer`."""
+
+    def _provide_semaphore(self) -> trio.Semaphore:
+        """Lazily create the shared provide-concurrency limiter."""
+        sem = getattr(self, "_provide_sem", None)
+        if sem is None:
+            sem = trio.Semaphore(MAX_CONCURRENT_PROVIDES)
+            self._provide_sem = sem
+        return sem
+
+    def _schedule_provide(self, cid_str: str, timeout: float) -> None:
+        """
+        Announce a CID to the DHT from a bounded background worker.
+
+        Duplicate requests for the same CID while one is still queued are
+        coalesced, and a full backlog drops the request instead of spawning
+        another 90-second walk.  Dropped announcements are retried by the
+        reprovider.
+        """
+        nursery = getattr(self, "_nursery", None)
+        if not nursery:
+            logger.warning(f"No nursery to background provide {cid_str}")
+            return
+
+        pending = getattr(self, "_provide_pending", None)
+        if pending is None:
+            pending = set()
+            self._provide_pending = pending
+
+        if cid_str in pending:
+            return
+        if len(pending) >= MAX_PENDING_PROVIDES:
+            logger.warning(
+                "DHT provide backlog full (%d pending); skipping announce for %s "
+                "(the reprovider will announce it later)",
+                len(pending),
+                cid_str,
+            )
+            return
+
+        pending.add(cid_str)
+        nursery.start_soon(self._provide_worker, cid_str, timeout)
+
+    async def _provide_worker(self, cid_str: str, timeout: float) -> None:
+        """Run one DHT provide under the shared concurrency limit."""
+        try:
+            async with self._provide_semaphore():
+                with trio.fail_after(timeout):
+                    await self.routing.provide(cid_str)
+        except trio.TooSlowError:
+            logger.warning(
+                f"Background DHT provide for {cid_str} timed out after "
+                f"{timeout:g}s — local provider record is still stored, "
+                f"but remote peers may not know about it yet."
+            )
+        except Exception as e:
+            logger.warning(f"Failed to provide {cid_str} to DHT: {e}")
+        finally:
+            pending = getattr(self, "_provide_pending", None)
+            if pending is not None:
+                pending.discard(cid_str)
 
     async def add_file(
         self,
@@ -117,25 +185,7 @@ class ContentMixin:
             # Using default_timeout (30s) races against this and causes a
             # silent TooSlowError (which prints as an empty exception message).
             # Match the explicit budget used by the /api/v0/dht/provide endpoint.
-            _provide_timeout = 90.0
-
-            async def _bg_provide() -> None:
-                try:
-                    with trio.fail_after(_provide_timeout):
-                        await routing.provide(cid_str)
-                except trio.TooSlowError:
-                    logger.warning(
-                        f"Background DHT provide for {cid_str} timed out after "
-                        f"{_provide_timeout}s — local provider record is still stored, "
-                        f"but remote peers may not know about it yet."
-                    )
-                except Exception as e:
-                    logger.warning(f"Failed to provide {cid_str} to DHT: {e}")
-
-            if getattr(self, "_nursery", None):
-                self._nursery.start_soon(_bg_provide)
-            else:
-                logger.warning(f"No nursery to background provide {cid_str}")
+            self._schedule_provide(cid_str, 90.0)
 
         return IPLDNode(cid_str)
 
@@ -333,18 +383,7 @@ class ContentMixin:
         cid_str = format_cid_for_display(cid)
         routing = self.routing
         if routing is not None:
-
-            async def _bg_provide() -> None:
-                try:
-                    with trio.fail_after(t_val):
-                        await routing.provide(cid_str)
-                except Exception as e:
-                    logger.warning(f"Failed to provide {cid_str} to DHT: {e}")
-
-            if getattr(self, "_nursery", None):
-                self._nursery.start_soon(_bg_provide)
-            else:
-                logger.warning(f"No nursery to background provide {cid_str}")
+            self._schedule_provide(cid_str, t_val)
         return IPLDNode(cid_str)
 
     async def get_node(

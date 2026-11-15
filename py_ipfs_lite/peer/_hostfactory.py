@@ -107,7 +107,16 @@ class HostFactoryMixin:
             db_path = os.path.join(self.config.blockstore_path, "peerstore.db")
 
             datastore = SQLiteDatastoreSync(path=db_path)
-            peerstore_opt = SyncPersistentPeerStore(datastore=datastore)
+            # Evicting a peer from the peerstore cache does not remove its
+            # rows, so without a stored-peer cap the database grows with every
+            # peer the node ever sees.  Keep a generous but fixed bound.
+            max_stored_peers = int(
+                os.environ.get("IPFS_LITE_PEERSTORE_MAX_PEERS", "4000")
+            )
+            peerstore_opt = SyncPersistentPeerStore(
+                datastore=datastore,
+                max_stored_peers=max_stored_peers,
+            )
 
         # Set rcmgr max_connections well above our high watermark to give
         # enough headroom for pending connection attempts during recovery

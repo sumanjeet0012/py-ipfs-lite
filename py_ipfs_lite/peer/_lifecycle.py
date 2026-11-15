@@ -161,6 +161,10 @@ class LifecycleMixin:
             # steady-state RSS stays flat instead of ratcheting upward.
             self._nursery.start_soon(self._memory_hygiene_loop)
 
+            # Trim the persisted peer set of a database written by an older
+            # build and release the freed SQLite pages.
+            self._nursery.start_soon(self._peerstore_maintenance_loop)
+
             # NOTE: the connection_pruner_loop is intentionally NOT started.
             # Pruning works by disconnecting peers, which triggers immediate
             # reconnect attempts from both sides. Each reconnect attempt
@@ -215,6 +219,7 @@ class LifecycleMixin:
             my_id = raw_host.get_id()
 
             max_peers = int(os.environ.get("IPFS_LITE_RT_WARMUP_PEERS", "256"))
+            all_ids: list[Any] = []
             if hasattr(peerstore, "sample_peer_ids"):
                 candidates = peerstore.sample_peer_ids(limit=max_peers)
             else:
@@ -222,6 +227,12 @@ class LifecycleMixin:
                 candidates = [pid for pid in all_ids if pid != my_id]
                 if len(candidates) > max_peers:
                     candidates = random.sample(candidates, max_peers)
+
+            total_persisted = (
+                peerstore.count_peers()
+                if hasattr(peerstore, "count_peers")
+                else len(all_ids)
+            )
 
             added = 0
             skipped_no_addr = 0
@@ -251,7 +262,7 @@ class LifecycleMixin:
                 added,
                 len(candidates),
                 skipped_no_addr,
-                len(all_ids),
+                total_persisted,
             )
         except Exception as e:
             logging.getLogger(__name__).warning(

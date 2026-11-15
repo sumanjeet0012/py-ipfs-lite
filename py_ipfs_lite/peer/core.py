@@ -90,6 +90,9 @@ class Peer(
         self._auto_connector = None
         self._connection_pruner = None
         self._inflight_pings: set[Any] = set()
+        # Bounded background DHT provide pool (see ContentMixin._schedule_provide).
+        self._provide_pending: set[str] = set()
+        self._provide_sem: Any = None
         self._ping_service: Any = None
         self._bootstrap_discovery: Any = None
         self._last_good_peer: Any | None = None
