@@ -143,7 +143,9 @@ class MaintenanceMixin:
 
         def _trim_once() -> int:
             removed = enforce()
-            if removed and compact is not None:
+            # compact() is cheap when there is nothing to vacuum, and it also
+            # truncates a WAL left behind by an abrupt stop. Always run it.
+            if compact is not None:
                 compact()
             return removed
 
