@@ -245,16 +245,23 @@ def _short_path(path: str) -> str:
     return path
 
 
-def tracemalloc_report(top: int = 25) -> dict[str, Any]:
-    """Allocation attribution by module, file and call site."""
+def tracemalloc_report(top: int = 25, detailed: bool = False) -> dict[str, Any]:
+    """
+    Allocation attribution by module, file and call site.
+
+    ``detailed=False`` groups by file only, which is much cheaper than
+    walking a full traceback for every live block and is enough to attribute
+    memory to a subsystem.  ``detailed=True`` also returns call sites.
+    """
     if not tracing_enabled():
         return {
             "enabled": False,
             "hint": f"restart with {TRACING_ENV}=1 to collect allocation sites",
         }
 
+    current, peak = tracemalloc.get_traced_memory()
     snapshot = tracemalloc.take_snapshot()
-    stats = snapshot.statistics("traceback")
+    stats = snapshot.statistics("traceback" if detailed else "filename")
 
     by_group: Counter[str] = Counter()
     by_group_count: Counter[str] = Counter()
@@ -274,7 +281,7 @@ def tracemalloc_report(top: int = 25) -> dict[str, Any]:
         by_group[group] += stat.size
         by_group_count[group] += stat.count
         by_file[f"{file_name}:{line}"] += stat.size
-        if len(sites) < top:
+        if detailed and len(sites) < top:
             sites.append(
                 {
                     "group": group,
@@ -300,6 +307,9 @@ def tracemalloc_report(top: int = 25) -> dict[str, Any]:
     ]
     return {
         "enabled": True,
+        "detailed": detailed,
+        "current_bytes": current,
+        "peak_bytes": peak,
         "total_traced_bytes": total,
         "groups": groups,
         "files": files,
@@ -384,8 +394,8 @@ def object_census(top: int = 30) -> dict[str, Any]:
 def deep_size(
     root: Any,
     visited: set[int] | None = None,
-    max_objects: int = 400_000,
-    deadline: float = 5.0,
+    max_objects: int = 150_000,
+    deadline: float = 2.0,
 ) -> int:
     """
     Transitive size of ``root`` in bytes, without double counting.
@@ -479,6 +489,72 @@ def subsystem_sizes(peer: Any) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# baseline diff
+# ---------------------------------------------------------------------------
+
+_BASELINE: Any = None
+_BASELINE_AT: str | None = None
+
+
+def set_baseline() -> bool:
+    """Store the current allocation snapshot as the comparison baseline."""
+    global _BASELINE, _BASELINE_AT
+    if not tracing_enabled():
+        return False
+    _BASELINE = tracemalloc.take_snapshot()
+    _BASELINE_AT = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    return True
+
+
+def diff_report(top: int = 25, detailed: bool = False) -> dict[str, Any]:
+    """Growth per module and per call site since the stored baseline."""
+    if not tracing_enabled() or _BASELINE is None:
+        return {"available": False, "hint": "call with ?baseline=set first"}
+
+    current = tracemalloc.take_snapshot()
+    diffs = current.compare_to(_BASELINE, "traceback" if detailed else "filename")
+    by_group: Counter[str] = Counter()
+    by_group_count: Counter[str] = Counter()
+    sites: list[dict[str, Any]] = []
+    for stat in diffs:
+        group = "unknown"
+        file_name = "unknown"
+        line = 0
+        if stat.traceback:
+            last = stat.traceback[-1]
+            file_name = _short_path(last.filename)
+            line = last.lineno
+            group = _group_for_path(last.filename)
+        by_group[group] += stat.size_diff
+        by_group_count[group] += stat.count_diff
+        if stat.size_diff > 0 and len(sites) < top:
+            sites.append(
+                {
+                    "group": group,
+                    "file": file_name,
+                    "line": line,
+                    "size_diff_bytes": stat.size_diff,
+                    "size_bytes": stat.size,
+                    "count_diff": stat.count_diff,
+                }
+            )
+    groups = [
+        {
+            "group": group,
+            "size_diff_bytes": size,
+            "count_diff": by_group_count[group],
+        }
+        for group, size in by_group.most_common()
+    ]
+    return {
+        "available": True,
+        "baseline_at": _BASELINE_AT,
+        "groups": groups,
+        "sites": sites,
+    }
+
+
+# ---------------------------------------------------------------------------
 # top-level snapshot
 # ---------------------------------------------------------------------------
 
@@ -490,13 +566,17 @@ def profile(
     subsystems: bool = False,
     tracemalloc_top: int = 25,
     objects_top: int = 30,
+    diff: bool = False,
+    detailed: bool = False,
 ) -> dict[str, Any]:
     """One consistent memory snapshot for the HTTP endpoint."""
     result: dict[str, Any] = {
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "rss": rss_breakdown(),
-        "tracemalloc": tracemalloc_report(tracemalloc_top),
+        "tracemalloc": tracemalloc_report(tracemalloc_top, detailed=detailed),
     }
+    if diff:
+        result["growth"] = diff_report(tracemalloc_top, detailed=detailed)
     if objects:
         result["objects"] = object_census(objects_top)
     if subsystems and peer is not None:

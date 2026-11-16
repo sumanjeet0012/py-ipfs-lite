@@ -78,6 +78,13 @@ async def debug_memory_profile(request: Request) -> Any:
     peer: Peer = getattr(request.app.state, "peer", None)
     params = request.query_params
     top = max(1, min(int(params.get("top", "25")), 200))
+    baseline = params.get("baseline", "").lower()
+    detailed = params.get("detail", "0") in ("1", "true", "yes")
+    if baseline == "set":
+        from py_ipfs_lite.memory_profile import set_baseline
+
+        await trio.to_thread.run_sync(set_baseline)
+        baseline = "diff"
     report = await trio.to_thread.run_sync(
         lambda: profile(
             peer,
@@ -85,6 +92,8 @@ async def debug_memory_profile(request: Request) -> Any:
             subsystems=params.get("subsystems", "0") in ("1", "true", "yes"),
             tracemalloc_top=top,
             objects_top=top,
+            diff=baseline == "diff",
+            detailed=detailed,
         )
     )
     return JSONResponse(content=report)
