@@ -68,6 +68,28 @@ async def debug_memory_retention(request: Request) -> Any:
     )
 
 
+@router.get("/api/v0/debug/memory/profile")
+async def debug_memory_profile(request: Request) -> Any:
+    """Attribute live memory to subsystems (slow; run on demand)."""
+    import trio
+
+    from py_ipfs_lite.memory_profile import profile
+
+    peer: Peer = getattr(request.app.state, "peer", None)
+    params = request.query_params
+    top = max(1, min(int(params.get("top", "25")), 200))
+    report = await trio.to_thread.run_sync(
+        lambda: profile(
+            peer,
+            objects=params.get("objects", "0") in ("1", "true", "yes"),
+            subsystems=params.get("subsystems", "0") in ("1", "true", "yes"),
+            tracemalloc_top=top,
+            objects_top=top,
+        )
+    )
+    return JSONResponse(content=report)
+
+
 @router.get("/api/v0/debug/memory")
 async def debug_memory(request: Request) -> Any:
     """Detailed live memory and object introspection endpoint."""

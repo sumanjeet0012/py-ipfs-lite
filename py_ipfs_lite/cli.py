@@ -211,6 +211,12 @@ def main() -> None:
     parser = get_parser()
     parsed_args = parser.parse_args()
 
+    # Start allocation tracing before the daemon allocates its long-lived
+    # state so /api/v0/debug/memory/profile can attribute bytes to modules.
+    from py_ipfs_lite.memory_profile import maybe_start_tracing
+
+    maybe_start_tracing()
+
     # Configure logging
     log_kwargs: dict[str, Any] = {
         "level": logging.DEBUG if parsed_args.debug else logging.INFO,
@@ -360,6 +366,7 @@ def main() -> None:
                                 exc,
                             )
                             import trio as _trio
+
                             await _trio.sleep(1)
 
                 trio.run(_serve_with_restart)
