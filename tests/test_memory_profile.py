@@ -129,3 +129,41 @@ def test_tracemalloc_report_can_skip_grouping():
     finally:
         if not already:
             tracemalloc.stop()
+
+
+def test_network_snapshot_reports_limits():
+    from py_ipfs_lite.memory_profile import network_snapshot
+
+    class FakeLimiter:
+        total_tokens = 250
+        borrowed_tokens = 180
+
+    class FakeNetwork:
+        connection_config = type(
+            "Cfg",
+            (),
+            {
+                "max_connections": 300,
+                "min_connections": 50,
+                "low_watermark": 100,
+                "high_watermark": 300,
+                "max_connections_per_peer": 3,
+            },
+        )()
+        _inbound_limiter = FakeLimiter()
+        connections = {"a": [1, 2], "b": [3]}
+
+    class FakeHost:
+        def get_network(self):
+            return FakeNetwork()
+
+    class FakePeer:
+        host = FakeHost()
+
+    snap = network_snapshot(FakePeer())
+    assert snap["max_connections"] == 300
+    assert snap["min_connections"] == 50
+    assert snap["inbound_capacity"] == 250
+    assert snap["inbound_borrowed"] == 180
+    assert snap["connections"] == 3
+    assert "Connections:" in format_report({"rss": {}, "network": snap})

@@ -571,6 +571,51 @@ def diff_report(top: int = 25, detailed: bool = False) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# live network configuration
+# ---------------------------------------------------------------------------
+
+
+def network_snapshot(peer: Any) -> dict[str, Any]:
+    """
+    Cheap snapshot of the live connection limits and their usage.
+
+    Exists because the configured watermarks and the limits the swarm actually
+    enforces can diverge, and the difference shows up as dial churn.
+    """
+    out: dict[str, Any] = {}
+    raw_host = getattr(peer, "host", None)
+    raw_host = getattr(raw_host, "_host", raw_host)
+    try:
+        network = raw_host.get_network()
+    except Exception as exc:
+        return {"error": str(exc)}
+    cfg = getattr(network, "connection_config", None)
+    if cfg is not None:
+        for field in (
+            "max_connections",
+            "min_connections",
+            "low_watermark",
+            "high_watermark",
+            "max_connections_per_peer",
+        ):
+            value = getattr(cfg, field, None)
+            if value is not None:
+                out[field] = value
+        out["connection_config_type"] = type(cfg).__name__
+    limiter = getattr(network, "_inbound_limiter", None)
+    if limiter is not None:
+        out["inbound_capacity"] = int(getattr(limiter, "total_tokens", 0))
+        out["inbound_borrowed"] = int(getattr(limiter, "borrowed_tokens", 0))
+    conns = getattr(network, "connections", None)
+    if isinstance(conns, dict):
+        out["connections"] = sum(
+            len(value) if isinstance(value, list | tuple | set) else 1
+            for value in conns.values()
+        )
+    return out
+
+
+# ---------------------------------------------------------------------------
 # top-level snapshot
 # ---------------------------------------------------------------------------
 
@@ -598,6 +643,8 @@ def profile(
         result["growth"] = diff_report(tracemalloc_top, detailed=detailed)
     if objects:
         result["objects"] = object_census(objects_top)
+    if peer is not None:
+        result["network"] = network_snapshot(peer)
     if subsystems and peer is not None:
         result["subsystems"] = subsystem_sizes(peer)
     return result
@@ -635,6 +682,19 @@ def format_report(report: dict[str, Any], top: int = 15) -> str:
             f"jemalloc allocated {_human(allocator.get('stats.allocated'))}, "
             f"resident {_human(allocator.get('stats.resident'))}, "
             f"retained {_human(allocator.get('stats.retained'))}"
+        )
+    net = report.get("network") or {}
+    if net and "error" not in net:
+        lines.append("")
+        lines.append(
+            "Connections: "
+            f"{net.get('connections', '?')} open, "
+            f"inbound cap {net.get('inbound_capacity', '?')} "
+            f"({net.get('inbound_borrowed', '?')} in use), "
+            f"max {net.get('max_connections', '?')}, "
+            f"min {net.get('min_connections', '?')}, "
+            f"watermarks {net.get('low_watermark', '?')}/"
+            f"{net.get('high_watermark', '?')}"
         )
     trace = report.get("tracemalloc", {})
     if trace.get("enabled"):
