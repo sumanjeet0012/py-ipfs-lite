@@ -108,3 +108,24 @@ def test_baseline_diff_reports_growth():
     finally:
         if not already:
             tracemalloc.stop()
+
+
+def test_tracemalloc_report_can_skip_grouping():
+    import tracemalloc
+
+    from py_ipfs_lite.memory_profile import tracemalloc_report
+
+    already = tracemalloc.is_tracing()
+    if not already:
+        tracemalloc.start(1)
+    try:
+        payload = [bytearray(512) for _ in range(10)]
+        assert payload
+        report = tracemalloc_report(top=5, groups=False)
+        assert report["enabled"] is True
+        assert report["groups_skipped"] is True
+        assert report["groups"] == []
+        assert report["total_traced_bytes"] > 0
+    finally:
+        if not already:
+            tracemalloc.stop()

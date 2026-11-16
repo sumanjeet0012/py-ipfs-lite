@@ -245,13 +245,18 @@ def _short_path(path: str) -> str:
     return path
 
 
-def tracemalloc_report(top: int = 25, detailed: bool = False) -> dict[str, Any]:
+def tracemalloc_report(
+    top: int = 25, detailed: bool = False, groups: bool = True
+) -> dict[str, Any]:
     """
     Allocation attribution by module, file and call site.
 
     ``detailed=False`` groups by file only, which is much cheaper than
     walking a full traceback for every live block and is enough to attribute
     memory to a subsystem.  ``detailed=True`` also returns call sites.
+    ``groups=False`` skips snapshotting altogether and reports only the live
+    total; use it for time series, where a snapshot per sample would itself
+    allocate tens of MiB and distort the trend.
     """
     if not tracing_enabled():
         return {
@@ -260,6 +265,17 @@ def tracemalloc_report(top: int = 25, detailed: bool = False) -> dict[str, Any]:
         }
 
     current, peak = tracemalloc.get_traced_memory()
+    if not groups:
+        return {
+            "enabled": True,
+            "groups_skipped": True,
+            "current_bytes": current,
+            "peak_bytes": peak,
+            "total_traced_bytes": current,
+            "groups": [],
+            "files": [],
+            "sites": [],
+        }
     snapshot = tracemalloc.take_snapshot()
     stats = snapshot.statistics("traceback" if detailed else "filename")
 
@@ -568,12 +584,15 @@ def profile(
     objects_top: int = 30,
     diff: bool = False,
     detailed: bool = False,
+    groups: bool = True,
 ) -> dict[str, Any]:
     """One consistent memory snapshot for the HTTP endpoint."""
     result: dict[str, Any] = {
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "rss": rss_breakdown(),
-        "tracemalloc": tracemalloc_report(tracemalloc_top, detailed=detailed),
+        "tracemalloc": tracemalloc_report(
+            tracemalloc_top, detailed=detailed, groups=groups
+        ),
     }
     if diff:
         result["growth"] = diff_report(tracemalloc_top, detailed=detailed)

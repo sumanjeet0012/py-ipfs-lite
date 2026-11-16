@@ -80,6 +80,7 @@ async def debug_memory_profile(request: Request) -> Any:
     top = max(1, min(int(params.get("top", "25")), 200))
     baseline = params.get("baseline", "").lower()
     detailed = params.get("detail", "0") in ("1", "true", "yes")
+    groups = params.get("groups", "1") in ("1", "true", "yes")
     if baseline == "set":
         from py_ipfs_lite.memory_profile import set_baseline
 
@@ -94,6 +95,7 @@ async def debug_memory_profile(request: Request) -> Any:
             objects_top=top,
             diff=baseline == "diff",
             detailed=detailed,
+            groups=groups,
         )
     )
     return JSONResponse(content=report)
