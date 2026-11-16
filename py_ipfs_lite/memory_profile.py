@@ -608,10 +608,13 @@ def network_snapshot(peer: Any) -> dict[str, Any]:
         out["inbound_borrowed"] = int(getattr(limiter, "borrowed_tokens", 0))
     conns = getattr(network, "connections", None)
     if isinstance(conns, dict):
-        out["connections"] = sum(
-            len(value) if isinstance(value, list | tuple | set) else 1
-            for value in conns.values()
-        )
+        try:
+            out["connections"] = sum(
+                len(value) if isinstance(value, list | tuple | set) else 1
+                for value in list(conns.values())
+            )
+        except Exception as exc:
+            out["connections_error"] = str(exc)
     return out
 
 
