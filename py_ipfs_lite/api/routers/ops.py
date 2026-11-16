@@ -58,13 +58,27 @@ async def debug_routing_table(request: Request) -> Any:
 @router.get("/api/v0/debug/memory/retention")
 async def debug_memory_retention(request: Request) -> Any:
     """Read ownership and allocator counters without GC or a heap scan."""
-    from py_ipfs_lite.memory_diagnostics import allocator_stats, retention_counts
+    from py_ipfs_lite.memory_diagnostics import (
+        allocator_stats,
+        quic_stream_census,
+        retention_counts,
+    )
 
     peer: Peer = request.app.state.peer
     raw_host = getattr(peer.host, "_host", peer.host) if peer.host else None
     retention = retention_counts(peer, raw_host.get_network()) if raw_host else {}
+    streams: dict[str, Any] = {}
+    if raw_host is not None:
+        try:
+            streams = quic_stream_census(raw_host.get_network())
+        except Exception as exc:  # diagnostics must never break the node
+            streams = {"error": f"{type(exc).__name__}: {exc}"}
     return JSONResponse(
-        content={"retention": retention, "allocator": allocator_stats()}
+        content={
+            "retention": retention,
+            "quic_streams": streams,
+            "allocator": allocator_stats(),
+        }
     )
 
 

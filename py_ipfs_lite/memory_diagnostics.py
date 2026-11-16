@@ -168,6 +168,77 @@ def retention_counts(peer: Any, network: Any) -> dict[str, Any]:
     return counts
 
 
+def quic_stream_census(network: Any) -> dict[str, Any]:
+    """Classify the aioquic streams live QUIC connections still track.
+
+    aioquic drops a stream from ``QuicConnection._streams`` only once both
+    halves report finished, and the send half finishes only when its FIN or
+    RESET is acknowledged. A stream that py-libp2p abandons without wrapping
+    (ignored late events, refused inbound streams) therefore stays in that
+    dict forever. Splitting the population by finished state and by whether a
+    py-libp2p wrapper exists separates live traffic from abandoned streams.
+    """
+    totals = {
+        "connections": 0,
+        "streams": 0,
+        "wrappers": 0,
+        "orphan_streams": 0,
+        "orphan_unfinished": 0,
+        "finished_not_discarded": 0,
+    }
+    states: Counter[str] = Counter()
+    worst: list[tuple[int, str, int]] = []
+    for connections in getattr(network, "connections", {}).values():
+        for connection in connections:
+            muxed = getattr(connection, "muxed_conn", None)
+            quic = getattr(muxed, "_quic", None)
+            streams = getattr(quic, "_streams", None)
+            if not isinstance(streams, dict):
+                continue
+            is_client = bool(
+                getattr(getattr(quic, "configuration", None), "is_client", False)
+            )
+            wrappers = getattr(muxed, "_streams", {})
+            wrapper_ids = set(wrappers) if isinstance(wrappers, dict) else set()
+            totals["connections"] += 1
+            totals["streams"] += len(streams)
+            totals["wrappers"] += len(wrapper_ids)
+            orphans = 0
+            for stream_id, stream in list(streams.items()):
+                sender = getattr(stream, "sender", None)
+                receiver = getattr(stream, "receiver", None)
+                send_done = bool(getattr(sender, "is_finished", False))
+                recv_done = bool(getattr(receiver, "is_finished", False))
+                peer_initiated = bool(stream_id & 1) == is_client
+                orphan = stream_id not in wrapper_ids
+                states[
+                    "sf=%d rf=%d peer_initiated=%d orphan=%d"
+                    % (send_done, recv_done, peer_initiated, orphan)
+                ] += 1
+                if orphan:
+                    orphans += 1
+                    totals["orphan_streams"] += 1
+                    if not (send_done and recv_done):
+                        totals["orphan_unfinished"] += 1
+                elif send_done and recv_done:
+                    # Finished on both halves but still not discarded: aioquic
+                    # only pops them while writing a packet, so this is expected
+                    # to be transient, never a large standing population.
+                    totals["finished_not_discarded"] += 1
+            if orphans:
+                peer_id = getattr(connection, "peer_id", None)
+                worst.append((orphans, str(peer_id), len(streams)))
+    worst.sort(reverse=True)
+    return {
+        "totals": totals,
+        "states": dict(states.most_common()),
+        "worst_connections": [
+            {"orphans": orphans, "peer_id": peer_id, "streams": streams}
+            for orphans, peer_id, streams in worst[:5]
+        ],
+    }
+
+
 def allocator_stats() -> dict[str, Any]:
     """Read jemalloc statistics if it is already loaded into this process."""
     library = ctypes.CDLL(None)

@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from py_ipfs_lite.config import Config
-from py_ipfs_lite.memory_diagnostics import retention_counts
+from py_ipfs_lite.memory_diagnostics import quic_stream_census, retention_counts
 from py_ipfs_lite.peer import Peer
 
 
@@ -40,6 +40,58 @@ def test_stream_ownership_exposes_closed_wrappers_and_orphan_channels():
         "message_channels": 2,
         "orphan_message_channels": 1,
     }
+
+
+def test_quic_stream_census_separates_wrapped_streams_from_orphans():
+    class Quic:
+        configuration = SimpleNamespace(is_client=True)
+        _streams = {
+            0: SimpleNamespace(
+                sender=SimpleNamespace(is_finished=False),
+                receiver=SimpleNamespace(is_finished=False),
+            ),
+            1: SimpleNamespace(
+                sender=SimpleNamespace(is_finished=False),
+                receiver=SimpleNamespace(is_finished=True),
+            ),
+            3: SimpleNamespace(
+                sender=SimpleNamespace(is_finished=True),
+                receiver=SimpleNamespace(is_finished=True),
+            ),
+        }
+
+    class Muxed:
+        _quic = Quic()
+        _streams = {0: object(), 3: object()}
+
+    conn = SimpleNamespace(muxed_conn=Muxed(), peer_id="peer-a")
+    result = quic_stream_census(SimpleNamespace(connections={"peer-a": [conn]}))
+    assert result["totals"] == {
+        "connections": 1,
+        "streams": 3,
+        "wrappers": 2,
+        "orphan_streams": 1,
+        "orphan_unfinished": 1,
+        "finished_not_discarded": 1,
+    }
+    assert result["states"] == {
+        "sf=0 rf=0 peer_initiated=0 orphan=0": 1,
+        "sf=0 rf=1 peer_initiated=1 orphan=1": 1,
+        "sf=1 rf=1 peer_initiated=1 orphan=0": 1,
+    }
+    assert result["worst_connections"] == [
+        {"orphans": 1, "peer_id": "peer-a", "streams": 3}
+    ]
+
+
+def test_quic_stream_census_ignores_non_quic_transports():
+    class Yamux:
+        streams = {1: object()}
+
+    conn = SimpleNamespace(muxed_conn=Yamux(), peer_id="peer-b")
+    result = quic_stream_census(SimpleNamespace(connections={"peer-b": [conn]}))
+    assert result["totals"]["connections"] == 0
+    assert result["states"] == {}
 
 
 def test_peerstore_reports_record_sizes_as_well_as_cache_capacity():
