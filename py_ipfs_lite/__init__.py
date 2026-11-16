@@ -1,3 +1,19 @@
+import os
+
+# Start allocation tracing before any submodule (and therefore before the
+# heavy libp2p/fastapi imports) allocates long-lived data, so the profiler can
+# attribute those bytes too. Opt-in via IPFS_LITE_MEMORY_TRACING=1.
+if os.environ.get("IPFS_LITE_MEMORY_TRACING", "").strip().lower() not in (
+    "",
+    "0",
+    "false",
+    "no",
+    "off",
+):
+    from py_ipfs_lite.memory_profile import maybe_start_tracing
+
+    maybe_start_tracing()
+
 from py_ipfs_lite.config import AddParams, Config
 from py_ipfs_lite.interfaces import BlockStore, DagService, Exchange, Host, Routing
 from py_ipfs_lite.peer import (

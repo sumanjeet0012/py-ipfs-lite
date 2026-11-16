@@ -316,7 +316,17 @@ def _type_group(type_name: str) -> str:
     for prefix, group in _TYPE_GROUP_PREFIXES:
         if type_name.startswith(prefix):
             return group
-    return "other"
+    module = type_name.rsplit(".", 1)[0]
+    if module == "builtins":
+        return "builtins"
+    if module.startswith("libp2p"):
+        return "libp2p.other"
+    if module.startswith("py_ipfs_lite"):
+        return "py_ipfs_lite.other"
+    top = module.split(".", 1)[0]
+    if top in ("gc", "sys", "tracemalloc", "threading", "typing", "abc", "enum"):
+        return "python.stdlib"
+    return f"python.package:{top}"
 
 
 def object_census(top: int = 30) -> dict[str, Any]:
