@@ -407,27 +407,33 @@ def object_census(top: int = 30) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def deep_size(
+def _deep_measure(
     root: Any,
     visited: set[int] | None = None,
     max_objects: int = 150_000,
     deadline: float = 2.0,
-) -> int:
+) -> tuple[int, int, bool]:
     """
-    Transitive size of ``root`` in bytes, without double counting.
+    Transitive size of ``root`` as ``(bytes, examined, truncated)``.
 
     Shared ``visited`` sets let several roots be measured in a defined order:
     the first root that reaches an object is charged for it.  Traversal stops
-    after ``max_objects`` or ``deadline`` seconds, so the endpoint stays
-    bounded even on a very large heap.
+    after ``max_objects`` or ``deadline`` seconds; ``truncated`` is True when
+    the walk stopped with objects still unvisited, so the size is a lower
+    bound rather than a measurement.
     """
     seen = visited if visited is not None else set()
     stack = [root]
     total = 0
     examined = 0
+    truncated = False
     started = time.monotonic()
-    while stack and examined < max_objects:
+    while stack:
+        if examined >= max_objects:
+            truncated = True
+            break
         if (examined & 0x3FFF) == 0 and time.monotonic() - started > deadline:
+            truncated = True
             break
         obj = stack.pop()
         obj_id = id(obj)
@@ -447,6 +453,19 @@ def deep_size(
             if isinstance(ref, _SKIP_REFERENT_TYPES):
                 continue
             stack.append(ref)
+    return total, examined, truncated
+
+
+def deep_size(
+    root: Any,
+    visited: set[int] | None = None,
+    max_objects: int = 150_000,
+    deadline: float = 2.0,
+) -> int:
+    """Transitive size of ``root`` in bytes, without double counting."""
+    total, _examined, _truncated = _deep_measure(
+        root, visited=visited, max_objects=max_objects, deadline=deadline
+    )
     return total
 
 
@@ -489,19 +508,27 @@ def subsystem_sizes(peer: Any) -> dict[str, Any]:
     seen: set[int] = set()
     sizes: dict[str, Any] = {}
     total = 0
+    truncated_any = False
     for name, root in roots:
         if root is None:
             sizes[name] = {"deep_bytes": 0, "present": False}
             continue
         before = len(seen)
-        size = deep_size(root, visited=seen)
+        size, examined, truncated = _deep_measure(root, visited=seen)
+        truncated_any = truncated_any or truncated
         sizes[name] = {
             "deep_bytes": size,
             "present": True,
             "objects_charged": len(seen) - before,
+            "objects_examined": examined,
+            "truncated": truncated,
         }
         total += size
-    return {"roots": sizes, "charged_bytes": total}
+    return {
+        "roots": sizes,
+        "charged_bytes": total,
+        "truncated": truncated_any,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -726,12 +753,16 @@ def format_report(report: dict[str, Any], top: int = 15) -> str:
     subs = report.get("subsystems")
     if subs:
         lines.append("")
-        lines.append("Deep size by ownership root (charged in order):")
+        suffix = " (truncated — lower bound)" if subs.get("truncated") else ""
+        lines.append(f"Deep size by ownership root (charged in order){suffix}:")
         for name, entry in subs.get("roots", {}).items():
             if not entry.get("present"):
                 continue
+            mark = " truncated" if entry.get("truncated") else ""
             lines.append(
                 f"  {name:<22} {_human(entry['deep_bytes']):>10} "
-                f"({entry['objects_charged']} objects)"
+                f"({entry['objects_charged']} objects, "
+                f"{entry.get('objects_examined', entry['objects_charged'])} examined)"
+                f"{mark}"
             )
     return "\n".join(lines)

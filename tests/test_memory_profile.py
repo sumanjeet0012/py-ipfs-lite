@@ -1,6 +1,7 @@
 import sys
 
 from py_ipfs_lite.memory_profile import (
+    _deep_measure,
     _group_for_path,
     deep_size,
     format_report,
@@ -44,6 +45,18 @@ def test_deep_size_does_not_double_count_shared_objects():
     # The second root shares the payload, so it must be charged far less.
     assert one > 10_000
     assert two < 1_000
+
+
+def test_deep_measure_reports_truncation():
+    payload = [bytearray(32) for _ in range(500)]
+    total, examined, truncated = _deep_measure(payload, max_objects=10, deadline=10)
+    assert total > 0
+    assert examined <= 10
+    assert truncated is True
+
+    total, examined, truncated = _deep_measure(payload, max_objects=10_000, deadline=10)
+    assert total > 0
+    assert truncated is False
 
 
 def test_object_census_reports_groups():
