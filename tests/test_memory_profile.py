@@ -86,3 +86,25 @@ def test_tracemalloc_report_after_start():
     finally:
         if not already:
             tracemalloc.stop()
+
+
+def test_baseline_diff_reports_growth():
+    import tracemalloc
+
+    from py_ipfs_lite.memory_profile import diff_report, set_baseline
+
+    already = tracemalloc.is_tracing()
+    if not already:
+        tracemalloc.start(5)
+    try:
+        assert set_baseline() is True
+        payload = [bytearray(2048) for _ in range(50)]
+        assert payload
+        report = diff_report(top=5)
+        assert report["available"] is True
+        assert report["groups"]
+        total_growth = sum(g["size_diff_bytes"] for g in report["groups"])
+        assert total_growth > 0
+    finally:
+        if not already:
+            tracemalloc.stop()
