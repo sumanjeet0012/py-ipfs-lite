@@ -8,6 +8,7 @@ from py_ipfs_lite.memory_profile import (
     object_census,
     profile,
     rss_breakdown,
+    subsystem_sizes,
     tracemalloc_report,
 )
 
@@ -57,6 +58,46 @@ def test_deep_measure_reports_truncation():
     total, examined, truncated = _deep_measure(payload, max_objects=10_000, deadline=10)
     assert total > 0
     assert truncated is False
+
+
+def test_subsystem_sizes_report_charge_and_truncation():
+    class FakeHost:
+        def get_peerstore(self):
+            return {"peers": [b"p" * 2048]}
+
+        def get_network(self):
+            return {"conns": {b"c" * 1024: 1}}
+
+    class FakePeer:
+        host = FakeHost()
+        _exchange = {"wants": [b"w" * 512]}
+        _gossipsub = {"topics": [b"t" * 256]}
+        _pubsub = None
+        routing = {}
+        blockstore = {"blocks": []}
+        dag_service = None
+
+    sizes = subsystem_sizes(FakePeer())
+    roots = sizes["roots"]
+    assert set(roots) == {
+        "peerstore",
+        "swarm",
+        "bitswap",
+        "pubsub",
+        "dht",
+        "blockstore",
+        "dag_service",
+    }
+    assert roots["peerstore"]["present"] is True
+    assert roots["peerstore"]["deep_bytes"] >= 2048
+    assert roots["dag_service"]["present"] is False
+    assert roots["dag_service"]["deep_bytes"] == 0
+    assert sizes["truncated"] is False
+    assert sizes["charged_bytes"] == sum(
+        entry["deep_bytes"] for entry in roots.values()
+    )
+    rendered = format_report({"rss": {}, "subsystems": sizes})
+    assert "Deep size by ownership root" in rendered
 
 
 def test_object_census_reports_groups():
