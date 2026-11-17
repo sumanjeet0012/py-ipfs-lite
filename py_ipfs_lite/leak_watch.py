@@ -189,6 +189,96 @@ def _ols(points: list[tuple[float, float]]) -> tuple[float, float, float]:
     return slope, stderr, r2
 
 
+class _ClassTrend:
+    """Per-connection trend of one resource class over a window of samples."""
+
+    __slots__ = (
+        "ratio_first",
+        "ratio_last",
+        "growth_fraction",
+        "trend_fraction",
+        "slope",
+        "stderr",
+        "r2",
+    )
+
+    def __init__(
+        self,
+        ratio_first: float,
+        ratio_last: float,
+        growth_fraction: float,
+        trend_fraction: float,
+        slope: float,
+        stderr: float,
+        r2: float,
+    ) -> None:
+        self.ratio_first = ratio_first
+        self.ratio_last = ratio_last
+        self.growth_fraction = growth_fraction
+        self.trend_fraction = trend_fraction
+        self.slope = slope
+        self.stderr = stderr
+        self.r2 = r2
+
+    @property
+    def is_rising(self) -> bool:
+        """
+        A sustained rise per connection, not a difference between medians.
+
+        Significance is the slope against its own standard error, not r²: a
+        genuine leak buried in sawtooth churn has a large slope and a modest
+        r², while noise has a small slope and an arbitrary one.  Also
+        deliberately scale-free, because the recent-tail window is shorter than
+        the full window; magnitude is checked on the full window instead.
+        """
+        if self.slope <= 0:
+            return False
+        return self.slope > 3.0 * self.stderr
+
+
+def _class_trend(samples: list[Sample], name: str) -> _ClassTrend:
+    """
+    Fit resources-per-connection against time for one class.
+
+    Absolute counts move with peer churn, so the only stable quantity is the
+    ratio.  The medians of the first and last thirds give direction; the fit
+    gives the size of the move across the whole window, which a third-to-third
+    difference understates for a linear ramp.
+    """
+    n = len(samples)
+    if n < 3:
+        return _ClassTrend(0.0, 0.0, 0.0, 0.0, 0.0, float("inf"), 0.0)
+    span = max(1e-9, samples[-1].t - samples[0].t)
+    ratios = [
+        sample.live.get(name, 0) / max(1, sample.connections) for sample in samples
+    ]
+    third = max(1, n // 3)
+    ratio_first = _median(ratios[:third])
+    ratio_last = _median(ratios[-third:])
+    slope, stderr, r2 = _ols(
+        [(sample.t, ratio) for sample, ratio in zip(samples, ratios)]
+    )
+    if ratio_first > 0:
+        growth_fraction = (ratio_last - ratio_first) / ratio_first
+        trend_fraction = slope * span / ratio_first
+    else:
+        growth_fraction = 1.0 if ratio_last > 0.5 else 0.0
+        trend_fraction = growth_fraction
+    return _ClassTrend(
+        ratio_first, ratio_last, growth_fraction, trend_fraction, slope, stderr, r2
+    )
+
+
+def _slope_on_work(samples: list[Sample], name: str) -> tuple[float, float]:
+    """Slope of live count against cumulative streams opened, and its r²."""
+    points = [
+        (sample.work.get("streams_opened", 0.0), sample.live.get(name, 0))
+        for sample in samples
+    ]
+    slope, _stderr, r2 = _ols(points)
+    return slope, r2
+
+
 class LeakWatch:
     """Sample live objects against cumulative work and issue a verdict."""
 
@@ -381,44 +471,23 @@ class LeakWatch:
             start = first.live.get(name, 0)
             end = last.live.get(name, 0)
             growth = end - start
-            points = [
-                (sample.work.get("streams_opened", 0.0), sample.live.get(name, 0))
-                for sample in samples
-            ]
-            slope, stderr, r2 = _ols(points)
-            # Stream registries sawtooth as cohorts are opened and swept, so a
-            # single first/last comparison flips on churn.  Compare the median
-            # of the first third of the window with the median of the last
-            # third instead: a real leak still shows, churn cancels out.
-            ratios = [
-                sample.live.get(name, 0) / max(1, sample.connections)
-                for sample in samples
-            ]
-            third = max(1, len(ratios) // 3)
-            ratio_first = _median(ratios[:third])
-            ratio_last = _median(ratios[-third:])
-            ratio_growth = ratio_last - ratio_first
-            ratio_slope, _ratio_stderr, ratio_r2 = _ols(
-                [(sample.t, ratio) for sample, ratio in zip(samples, ratios)]
-            )
-            # The medians show direction; the fit gives the size of the move
-            # across the whole window, which a third-to-third difference
-            # understates for a linear ramp.
-            if ratio_first > 0:
-                ratio_growth_fraction = ratio_growth / ratio_first
-                ratio_trend_fraction = ratio_slope * span / ratio_first
-            else:
-                ratio_growth_fraction = 1.0 if ratio_last > 0.5 else 0.0
-                ratio_trend_fraction = ratio_growth_fraction
+            slope, r2 = _slope_on_work(samples, name)
+            full = _class_trend(samples, name)
+            # Persistence check: a real leak shows the same sustained trend in
+            # both the whole window and its recent tail.  A local excursion that
+            # happens to end high satisfies only one of them and stays SUSPECT.
+            recent_samples = samples[-max(MIN_STABLE_SAMPLES, 2 * len(samples) // 3) :]
+            recent = _class_trend(recent_samples, name)
             entry: dict[str, Any] = {
                 "live": end,
                 "previous_live": start,
                 "growth": growth,
-                "per_connection": round(ratio_last, 3),
-                "per_connection_first": round(ratio_first, 3),
-                "per_connection_growth": round(ratio_growth, 3),
-                "per_connection_growth_fraction": round(ratio_growth_fraction, 3),
-                "per_connection_trend_fraction": round(ratio_trend_fraction, 3),
+                "per_connection": round(full.ratio_last, 3),
+                "per_connection_first": round(full.ratio_first, 3),
+                "per_connection_growth": round(full.ratio_last - full.ratio_first, 3),
+                "per_connection_growth_fraction": round(full.growth_fraction, 3),
+                "per_connection_trend_fraction": round(full.trend_fraction, 3),
+                "per_connection_r2": round(full.r2, 3),
                 "growth_per_1000_streams": (
                     round(slope * 1000.0, 3) if span >= MIN_VERDICT_SPAN_S else None
                 ),
@@ -435,13 +504,13 @@ class LeakWatch:
                 stable and span >= MIN_VERDICT_SPAN_S and work_delta >= MIN_VERDICT_WORK
             )
             # A leak is a *sustained* rise in resources per connection; churn is
-            # a rise with no trend.  Fit the ratio itself and require a real
-            # trend, not just a difference between two medians.
+            # a rise with no trend.  Fit the ratio itself and require the trend
+            # in both horizons.
             significant = (
                 enough
-                and ratio_trend_fraction >= 0.08
-                and ratio_slope > 0
-                and ratio_r2 >= 0.6
+                and full.is_rising
+                and full.trend_fraction >= 0.08
+                and recent.is_rising
                 and growth > max(8, 0.05 * start)
             )
             if not enough:
@@ -454,11 +523,10 @@ class LeakWatch:
                         entry["eta_minutes_to_double"] = round(
                             end / growth_per_minute, 1
                         )
-            elif ratio_growth_fraction >= 0.05 or (ratio_slope > 0 and ratio_r2 >= 0.4):
+            elif full.growth_fraction >= 0.05 or (full.slope > 0 and full.r2 >= 0.4):
                 entry["verdict"] = "SUSPECT"
             else:
                 entry["verdict"] = "BOUNDED"
-            entry["per_connection_r2"] = round(ratio_r2, 3)
             classes[name] = entry
 
         memory: dict[str, Any] = {}
