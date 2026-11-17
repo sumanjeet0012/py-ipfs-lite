@@ -122,7 +122,8 @@ def retention_counts(peer: Any, network: Any) -> dict[str, Any]:
             "disconnections": len(getattr(gossip, "recent_peer_disconnections", ())),
             "delivery_topics": len(getattr(gossip, "recent_message_deliveries", {})),
             "delivery_timestamps": sum(
-                len(v) for v in getattr(gossip, "recent_message_deliveries", {}).values()
+                len(v)
+                for v in getattr(gossip, "recent_message_deliveries", {}).values()
             ),
             "publish_topics": len(getattr(gossip, "time_since_last_publish", {})),
             "fanout_topics": len(getattr(gossip, "fanout", {})),
@@ -168,8 +169,20 @@ def retention_counts(peer: Any, network: Any) -> dict[str, Any]:
     return counts
 
 
+def _offset_bucket(value: Any) -> str:
+    """Bucket a stream offset so the census stays a fixed-size summary."""
+    if not value:
+        return "0"
+    if value <= 1024:
+        return "<=1k"
+    if value <= 65536:
+        return "<=64k"
+    return ">64k"
+
+
 def quic_stream_census(network: Any) -> dict[str, Any]:
-    """Classify the aioquic streams live QUIC connections still track.
+    """
+    Classify the aioquic streams live QUIC connections still track.
 
     aioquic drops a stream from ``QuicConnection._streams`` only once both
     halves report finished, and the send half finishes only when its FIN or
@@ -187,7 +200,9 @@ def quic_stream_census(network: Any) -> dict[str, Any]:
         "finished_not_discarded": 0,
     }
     states: Counter[str] = Counter()
+    orphan_detail: Counter[str] = Counter()
     worst: list[tuple[int, str, int]] = []
+    connection_detail: list[dict[str, Any]] = []
     for connections in getattr(network, "connections", {}).values():
         for connection in connections:
             muxed = getattr(connection, "muxed_conn", None)
@@ -220,6 +235,20 @@ def quic_stream_census(network: Any) -> dict[str, Any]:
                     totals["orphan_streams"] += 1
                     if not (send_done and recv_done):
                         totals["orphan_unfinished"] += 1
+                    orphan_detail[
+                        "sent=%s recv=%s reset=%d stop=%d acked_fin=%d "
+                        "empty=%d final=%d id_mod4=%d"
+                        % (
+                            _offset_bucket(getattr(sender, "highest_offset", 0)),
+                            _offset_bucket(getattr(receiver, "highest_offset", 0)),
+                            bool(getattr(sender, "reset_pending", False)),
+                            bool(getattr(receiver, "stop_pending", False)),
+                            bool(getattr(sender, "_acked_fin", False)),
+                            bool(getattr(sender, "buffer_is_empty", False)),
+                            getattr(receiver, "_final_size", None) is not None,
+                            stream_id % 4,
+                        )
+                    ] += 1
                 elif send_done and recv_done:
                     # Finished on both halves but still not discarded: aioquic
                     # only pops them while writing a packet, so this is expected
@@ -228,10 +257,37 @@ def quic_stream_census(network: Any) -> dict[str, Any]:
             if orphans:
                 peer_id = getattr(connection, "peer_id", None)
                 worst.append((orphans, str(peer_id), len(streams)))
+                stats = getattr(muxed, "_stats", {}) or {}
+                connection_detail.append(
+                    {
+                        "orphans": orphans,
+                        "streams": len(streams),
+                        "wrappers": len(wrapper_ids),
+                        "is_client": is_client,
+                        "closed": bool(
+                            getattr(muxed, "_closed", False)
+                            or getattr(muxed, "is_closed", lambda: False)()
+                        ),
+                        "handshake_completed": bool(
+                            getattr(muxed, "_handshake_completed", False)
+                        ),
+                        "next_stream_id": getattr(muxed, "_next_stream_id", None),
+                        "recently_closed": len(
+                            getattr(muxed, "_recently_closed_streams", ())
+                        ),
+                        "bytes_sent": stats.get("bytes_sent"),
+                        "bytes_received": stats.get("bytes_received"),
+                        "streams_opened": stats.get("streams_opened"),
+                        "streams_reset": stats.get("streams_reset"),
+                    }
+                )
     worst.sort(reverse=True)
+    connection_detail.sort(key=lambda item: -item["orphans"])
     return {
         "totals": totals,
         "states": dict(states.most_common()),
+        "orphan_detail": dict(orphan_detail.most_common(10)),
+        "connections_with_orphans": connection_detail[:8],
         "worst_connections": [
             {"orphans": orphans, "peer_id": peer_id, "streams": streams}
             for orphans, peer_id, streams in worst[:5]
