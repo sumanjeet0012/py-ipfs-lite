@@ -180,6 +180,13 @@ def _offset_bucket(value: Any) -> str:
     return ">64k"
 
 
+def _connection_closed(muxed: Any) -> bool:
+    """Read a closed flag that may be a bool or a method."""
+    attribute = getattr(muxed, "is_closed", None)
+    reported = attribute() if callable(attribute) else bool(attribute)
+    return bool(getattr(muxed, "_closed", False) or reported)
+
+
 def quic_stream_census(network: Any) -> dict[str, Any]:
     """
     Classify the aioquic streams live QUIC connections still track.
@@ -264,10 +271,7 @@ def quic_stream_census(network: Any) -> dict[str, Any]:
                         "streams": len(streams),
                         "wrappers": len(wrapper_ids),
                         "is_client": is_client,
-                        "closed": bool(
-                            getattr(muxed, "_closed", False)
-                            or getattr(muxed, "is_closed", lambda: False)()
-                        ),
+                        "closed": _connection_closed(muxed),
                         "handshake_completed": bool(
                             getattr(muxed, "_handshake_completed", False)
                         ),

@@ -1,7 +1,11 @@
 from types import SimpleNamespace
 
 from py_ipfs_lite.config import Config
-from py_ipfs_lite.memory_diagnostics import quic_stream_census, retention_counts
+from py_ipfs_lite.memory_diagnostics import (
+    _connection_closed,
+    quic_stream_census,
+    retention_counts,
+)
 from py_ipfs_lite.peer import Peer
 
 
@@ -82,6 +86,13 @@ def test_quic_stream_census_separates_wrapped_streams_from_orphans():
     assert result["worst_connections"] == [
         {"orphans": 1, "peer_id": "peer-a", "streams": 3}
     ]
+
+
+def test_connection_closed_reads_both_bool_and_method_forms():
+    assert _connection_closed(SimpleNamespace(is_closed=True)) is True
+    assert _connection_closed(SimpleNamespace(is_closed=False, _closed=False)) is False
+    assert _connection_closed(SimpleNamespace(is_closed=lambda: True)) is True
+    assert _connection_closed(SimpleNamespace(_closed=True)) is True
 
 
 def test_quic_stream_census_ignores_non_quic_transports():
