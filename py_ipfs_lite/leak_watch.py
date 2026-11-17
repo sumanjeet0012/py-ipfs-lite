@@ -58,6 +58,8 @@ DEFAULT_ORPHAN_AGE_S = float(os.environ.get("IPFS_LITE_LEAK_ORPHAN_AGE_S", "300"
 MIN_VERDICT_SPAN_S = 90.0
 #: Minimum cumulative streams opened before a ratio verdict is meaningful.
 MIN_VERDICT_WORK = 500
+#: Samples needed inside a stable peer population before judging.
+MIN_STABLE_SAMPLES = 6
 
 
 @dataclass(frozen=True)
@@ -133,8 +135,12 @@ def memory_provenance() -> dict[str, float]:
         from py_ipfs_lite.memory_diagnostics import allocator_stats
 
         stats = allocator_stats()
-        for key in ("stats.allocated", "stats.active", "stats.resident",
-                    "stats.retained"):
+        for key in (
+            "stats.allocated",
+            "stats.active",
+            "stats.resident",
+            "stats.retained",
+        ):
             value = stats.get(key)
             if isinstance(value, int):
                 provenance[key.replace(".", "_")] = float(value)
@@ -226,12 +232,14 @@ class LeakWatch:
                 wrapper_ids = (
                     frozenset(wrappers) if isinstance(wrappers, dict) else frozenset()
                 )
-                if isinstance(wrappers, dict):
-                    live[f"{family}_wrappers"] += len(wrappers)
                 channels = getattr(muxed, "streams_msg_channels", None)
-                if isinstance(channels, dict):
-                    live[f"{family}_channels"] += len(channels)
+                if isinstance(channels, dict) and channels:
+                    live[f"{family}_orphan_channels"] += sum(
+                        1 for stream_id in channels if stream_id not in wrapper_ids
+                    )
                 if family == "quic":
+                    if isinstance(wrappers, dict):
+                        live["quic_wrappers"] += len(wrappers)
                     quic = getattr(muxed, "_quic", None)
                     transport = getattr(quic, "_streams", None)
                     if isinstance(transport, dict):
@@ -242,12 +250,12 @@ class LeakWatch:
                         for stream_id in orphans:
                             seen.setdefault(stream_id, now)
                         for stream_id in list(seen):
-                            if stream_id not in transport or (
-                                stream_id in wrapper_ids
-                            ):
+                            if stream_id not in transport or (stream_id in wrapper_ids):
                                 del seen[stream_id]
                         quic_connections.add(id(muxed))
                 elif isinstance(wrappers, dict):
+                    # yamux/mplex expose exactly one stream registry; reporting
+                    # it twice as "streams" and "wrappers" only adds noise.
                     live[f"{family}_streams"] += len(wrappers)
                 connection_stats = getattr(muxed, "_stats", None)
                 if isinstance(connection_stats, dict):
@@ -318,6 +326,26 @@ class LeakWatch:
                 "hint": "sampler has not run yet",
                 "interval_s": self.interval,
             }
+        # Absolute counts legitimately grow while peers are still being dialled:
+        # that is population growth, not a leak, and treating it as one is how
+        # "wait an hour and see" becomes the default.  Anchor the analysis on
+        # the trailing period during which the peer population was stable, and
+        # refuse to judge anything if there is no such period yet.
+        final_connections = samples[-1].connections
+        anchored_from = 0
+        if final_connections > 0:
+            low_water = 0.85 * final_connections
+            below = [i for i, s in enumerate(samples) if s.connections < low_water]
+            if below:
+                anchored_from = below[-1] + 1
+        stable = len(samples) - anchored_from >= MIN_STABLE_SAMPLES
+        if stable:
+            samples = samples[anchored_from:]
+        connection_counts = [s.connections for s in samples]
+        connection_range = {
+            "min": min(connection_counts),
+            "max": max(connection_counts),
+        }
         first, last = samples[0], samples[-1]
         span = max(0.0, last.t - first.t)
         work_delta = last.work.get("streams_opened", 0.0) - first.work.get(
@@ -333,27 +361,40 @@ class LeakWatch:
                 for sample in samples
             ]
             slope, stderr, r2 = _ols(points)
+            first_per_connection = start / max(1, first.connections)
+            last_per_connection = end / max(1, last.connections)
+            per_connection_growth = last_per_connection - first_per_connection
             entry: dict[str, Any] = {
                 "live": end,
                 "previous_live": start,
                 "growth": growth,
-                "per_connection": round(end / max(1, last.connections), 3),
+                "per_connection": round(last_per_connection, 3),
+                "per_connection_growth": round(per_connection_growth, 3),
                 "growth_per_1000_streams": (
                     round(slope * 1000.0, 3) if span >= MIN_VERDICT_SPAN_S else None
                 ),
                 "r2": round(r2, 3),
             }
-            if span < MIN_VERDICT_SPAN_S or work_delta < MIN_VERDICT_WORK:
+            significant = (
+                slope > 0
+                and r2 >= 0.5
+                and growth > max(8, 0.05 * start)
+                and per_connection_growth > 0
+                and (
+                    slope > 3.0 * stderr if stderr not in (0.0, float("inf")) else True
+                )
+            )
+            if not stable or span < MIN_VERDICT_SPAN_S or work_delta < MIN_VERDICT_WORK:
                 entry["verdict"] = "INSUFFICIENT_DATA"
-            elif slope > 0 and r2 >= 0.5 and growth > max(8, 0.03 * start) and (
-                slope > 3.0 * stderr if stderr not in (0.0, float("inf")) else True
-            ):
+            elif significant:
                 entry["verdict"] = "LEAKING"
                 if slope > 0 and work_delta > 0:
-                    entry["eta_minutes_to_double"] = round(
-                        end / (slope * work_delta / (span / 60.0)), 1
-                    )
-            elif growth <= max(8, 0.03 * start):
+                    growth_per_minute = slope * work_delta / (span / 60.0)
+                    if growth_per_minute > 0:
+                        entry["eta_minutes_to_double"] = round(
+                            end / growth_per_minute, 1
+                        )
+            elif per_connection_growth <= 0:
                 entry["verdict"] = "BOUNDED"
             else:
                 entry["verdict"] = "SUSPECT"
@@ -371,14 +412,13 @@ class LeakWatch:
             }
 
         orphan_count, orphan_oldest, orphan_p99 = self._orphan_age()
-        leaks = [name for name, entry in classes.items()
-                 if entry["verdict"] == "LEAKING"]
+        leaks = [
+            name for name, entry in classes.items() if entry["verdict"] == "LEAKING"
+        ]
         hard_leak = orphan_count > 0 and orphan_oldest > DEFAULT_ORPHAN_AGE_S
-        if hard_leak:
+        if hard_leak or leaks:
             state = "LEAK"
-        elif leaks:
-            state = "LEAK"
-        elif span < MIN_VERDICT_SPAN_S or work_delta < MIN_VERDICT_WORK:
+        elif not stable or span < MIN_VERDICT_SPAN_S or work_delta < MIN_VERDICT_WORK:
             state = "WARMING_UP"
         else:
             state = "BOUNDED"
@@ -386,9 +426,10 @@ class LeakWatch:
             "state": state,
             "span_seconds": round(span, 1),
             "samples": len(samples),
-            "streams_opened_since_start": int(
-                last.work.get("streams_opened", 0.0)
-            ),
+            "discarded_rampup_samples": anchored_from,
+            "connections_stable": stable,
+            "connection_range": connection_range,
+            "streams_opened_since_start": int(last.work.get("streams_opened", 0.0)),
             "streams_opened_in_window": int(work_delta),
             "leaking_classes": leaks,
             "orphans": {
@@ -401,9 +442,10 @@ class LeakWatch:
             "classes": classes,
             "memory": memory,
             "note": (
-                "orphan ages are lower bounds (streams predating the sampler "
-                "are stamped at start), so a hard_leak verdict cannot be a "
-                "false positive"
+                "verdicts are per-connection and only issued once the peer "
+                "population is stable; orphan ages are lower bounds (streams "
+                "predating the sampler are stamped at start), so a hard_leak "
+                "verdict cannot be a false positive"
             ),
         }
 

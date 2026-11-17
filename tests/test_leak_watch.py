@@ -5,7 +5,10 @@ import time
 from py_ipfs_lite.leak_watch import LeakWatch, Sample, _ols
 
 
-def _watch_with(samples: list[tuple[float, float, int]]) -> LeakWatch:
+def _watch_with(
+    samples: list[tuple[float, float, int]],
+    connections: int | list[int] | None = None,
+) -> LeakWatch:
     """
     Build a watch over synthetic (t, streams_opened, live_streams) samples.
 
@@ -14,11 +17,17 @@ def _watch_with(samples: list[tuple[float, float, int]]) -> LeakWatch:
     """
     watch = LeakWatch(peer=None)
     for index, (t, opened, live) in enumerate(samples):
+        if connections is None:
+            peer_count = 400
+        elif isinstance(connections, int):
+            peer_count = connections
+        else:
+            peer_count = connections[index]
         watch._samples.append(
             Sample(
                 t=t,
                 wall=1_700_000_000.0 + t,
-                connections=400,
+                connections=peer_count,
                 live={"quic_streams": live, "quic_orphans": 0},
                 work={"streams_opened": opened},
                 mem={"python_blocks": 1_300_000.0 + index, "rss": 214_000_000.0},
@@ -57,6 +66,42 @@ def test_warmup_is_reported_as_warmup_not_as_bounded() -> None:
     report = _watch_with(samples).report()
     assert report["state"] == "WARMING_UP"
     assert report["classes"]["quic_streams"]["verdict"] == "INSUFFICIENT_DATA"
+
+
+def test_peer_rampup_is_not_mistaken_for_a_leak() -> None:
+    """
+    Growing resources during connection ramp-up are population growth.
+
+    This is the exact false verdict that made "wait an hour and see" look
+    necessary: absolute counts rise for minutes while peers are dialled.
+    """
+    samples = []
+    connections = []
+    for index, t in enumerate(range(0, 192, 6)):
+        peers = 20 + index * 10  # still climbing when the series ends
+        connections.append(peers)
+        # One stream registry entry per peer, i.e. perfectly proportional.
+        samples.append((float(t), t * 50.0, peers))
+    report = _watch_with(samples, connections).report()
+    assert report["state"] == "WARMING_UP"
+    assert report["leaking_classes"] == []
+    assert report["connections_stable"] is False
+
+
+def test_verdict_anchors_after_rampup_and_then_bounds() -> None:
+    """Once peers stabilise, proportional resources must read as BOUNDED."""
+    samples = []
+    connections = []
+    for index, t in enumerate(range(0, 361, 6)):
+        peers = min(400, 20 + index * 40)
+        connections.append(peers)
+        samples.append((float(t), t * 50.0, peers))
+    report = _watch_with(samples, connections).report()
+    assert report["connections_stable"] is True
+    assert report["discarded_rampup_samples"] > 0
+    assert report["state"] == "BOUNDED"
+    assert report["classes"]["quic_streams"]["verdict"] == "BOUNDED"
+    assert report["classes"]["quic_streams"]["per_connection_growth"] == 0.0
 
 
 def test_orphan_age_is_a_zero_false_positive_test() -> None:
@@ -160,9 +205,7 @@ def test_collect_separates_orphans_from_wrappers() -> None:
         transport=transport,
         stats={"streams_opened": 120, "streams_closed": 116},
     )
-    watch = LeakWatch(
-        peer=_FakePeer(_FakeNetwork({"peer": [_FakeConnection(conn)]}))
-    )
+    watch = LeakWatch(peer=_FakePeer(_FakeNetwork({"peer": [_FakeConnection(conn)]})))
     live, _keys, _stats, count = watch._collect(time.monotonic())
     assert count == 1
     assert live["quic_connections"] == 1
@@ -187,9 +230,7 @@ def test_work_accrual_counts_deltas_not_absolute_totals() -> None:
     """Cumulative counters must be summed as deltas across connections."""
     stats = {"streams_opened": 100, "streams_closed": 90}
     conn = QUICConnection(wrappers={}, transport={}, stats=stats)
-    watch = LeakWatch(
-        peer=_FakePeer(_FakeNetwork({"peer": [_FakeConnection(conn)]}))
-    )
+    watch = LeakWatch(peer=_FakePeer(_FakeNetwork({"peer": [_FakeConnection(conn)]})))
     watch.sample()
     assert watch._work["streams_opened"] == 0  # first sight is a baseline only
     stats["streams_opened"] = 140
@@ -198,4 +239,3 @@ def test_work_accrual_counts_deltas_not_absolute_totals() -> None:
     stats["streams_opened"] = 175
     watch.sample()
     assert watch._work["streams_opened"] == 75
-
