@@ -179,6 +179,12 @@ class LifecycleMixin:
             if self.config.stream_monitor_enabled:
                 self._nursery.start_soon(self._stream_leak_monitor_loop)
 
+            # Leak identification by object accounting.  This is cheap (no
+            # tracemalloc, no GC, no heap walk) and it is what answers "is this
+            # a leak?" in minutes instead of after hours of watching RSS.
+            if os.environ.get("IPFS_LITE_LEAK_WATCH", "1") not in ("0", "false"):
+                self._nursery.start_soon(self._leak_watch_loop)
+
             # Initialize Pubsub/GossipSub if enabled
             if self.config.enable_pubsub:
                 await self._init_pubsub()

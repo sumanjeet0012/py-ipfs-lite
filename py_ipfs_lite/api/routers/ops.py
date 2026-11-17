@@ -55,6 +55,29 @@ async def debug_routing_table(request: Request) -> Any:
     return JSONResponse(content={"count": res.count, "peers": res.peers})
 
 
+@router.get("/api/v0/debug/memory/leak")
+async def debug_memory_leak(request: Request) -> Any:
+    """
+    Answer "is this a leak?" from object accounting, not from RSS.
+
+    Cheap enough to call every few seconds: no GC, no tracemalloc, no heap
+    walk.  ``state`` becomes ``BOUNDED`` or ``LEAK`` after roughly two minutes
+    of exported traffic, and ``orphans.hard_leak`` is a zero-false-positive
+    test because orphan ages are lower bounds.
+    """
+    peer: Peer = getattr(request.app.state, "peer", None)
+    if peer is None:
+        return JSONResponse(content={"state": "NO_PEER"})
+    from py_ipfs_lite.leak_watch import get_watch
+
+    watch = get_watch(peer)
+    if watch is None:
+        return JSONResponse(content={"state": "NO_DATA"})
+    window = request.query_params.get("window")
+    report = watch.report(int(window) if window else None)
+    return JSONResponse(content=report)
+
+
 @router.get("/api/v0/debug/memory/retention")
 async def debug_memory_retention(request: Request) -> Any:
     """Read ownership and allocator counters without GC or a heap scan."""

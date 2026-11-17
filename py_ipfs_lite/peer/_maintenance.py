@@ -340,6 +340,51 @@ class MaintenanceMixin:
             except Exception as e:
                 logger.debug(f"Connection pruner error: {e}")
 
+    async def _leak_watch_loop(self) -> None:
+        """
+        Sample live objects against cumulative work and log a verdict.
+
+        Deliberately separate from ``_stream_leak_monitor_loop``: that loop
+        runs ``gc.collect()`` and ``malloc_trim`` on the same tick, which
+        deflates RSS and hides exactly the growth we are looking for here.
+        This loop touches nothing and frees nothing.
+        """
+        from py_ipfs_lite import leak_watch
+
+        watch = leak_watch.get_watch(self)
+        if watch is None:
+            return
+        logger.info(
+            "Leak watch started: sampling every %.0fs, orphan-age threshold %.0fs",
+            watch.interval,
+            leak_watch.DEFAULT_ORPHAN_AGE_S,
+        )
+        while True:
+            try:
+                watch.sample()
+                if watch.should_log():
+                    report = watch.report()
+                    if report["state"] == "LEAK":
+                        logger.warning(
+                            "Leak verdict: %s — leaking classes %s, orphans %s "
+                            "oldest %.0fs over %d streams opened",
+                            report["state"],
+                            report["leaking_classes"],
+                            report["orphans"]["count"],
+                            report["orphans"]["oldest_age_seconds"],
+                            report["streams_opened_since_start"],
+                        )
+                    elif logger.isEnabledFor(logging.DEBUG):
+                        logger.debug(
+                            "Leak verdict: %s over %.0fs / %d streams opened",
+                            report["state"],
+                            report["span_seconds"],
+                            report["streams_opened_in_window"],
+                        )
+            except Exception as e:  # diagnostics must never break the node
+                logger.debug(f"Leak watch sample error: {e}")
+            await trio.sleep(watch.interval)
+
     async def _stream_leak_monitor_loop(self) -> None:
         """
         Periodically sweep open streams and log/flag suspected leaks.
