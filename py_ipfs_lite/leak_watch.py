@@ -154,6 +154,16 @@ def memory_provenance() -> dict[str, float]:
     return provenance
 
 
+def _median(values: list[float]) -> float:
+    ordered = sorted(values)
+    if not ordered:
+        return 0.0
+    middle = len(ordered) // 2
+    if len(ordered) % 2:
+        return ordered[middle]
+    return (ordered[middle - 1] + ordered[middle]) / 2.0
+
+
 def _ols(points: list[tuple[float, float]]) -> tuple[float, float, float]:
     """Least squares slope, its standard error and r² for (x, y) points."""
     n = len(points)
@@ -346,6 +356,21 @@ class LeakWatch:
             "min": min(connection_counts),
             "max": max(connection_counts),
         }
+        # Judge the *level*, not the endpoints: peer churn swings the count by
+        # more than a leak moves it, but the median level only moves when the
+        # population really is still settling.
+        third = max(1, len(connection_counts) // 3)
+        mean_connections = _median([float(c) for c in connection_counts])
+        net_connection_drift = (
+            abs(
+                _median([float(c) for c in connection_counts[-third:]])
+                - _median([float(c) for c in connection_counts[:third]])
+            )
+            / mean_connections
+            if mean_connections
+            else 0.0
+        )
+        stable = stable and net_connection_drift <= 0.10
         first, last = samples[0], samples[-1]
         span = max(0.0, last.t - first.t)
         work_delta = last.work.get("streams_opened", 0.0) - first.work.get(
@@ -361,30 +386,65 @@ class LeakWatch:
                 for sample in samples
             ]
             slope, stderr, r2 = _ols(points)
-            first_per_connection = start / max(1, first.connections)
-            last_per_connection = end / max(1, last.connections)
-            per_connection_growth = last_per_connection - first_per_connection
+            # Stream registries sawtooth as cohorts are opened and swept, so a
+            # single first/last comparison flips on churn.  Compare the median
+            # of the first third of the window with the median of the last
+            # third instead: a real leak still shows, churn cancels out.
+            ratios = [
+                sample.live.get(name, 0) / max(1, sample.connections)
+                for sample in samples
+            ]
+            third = max(1, len(ratios) // 3)
+            ratio_first = _median(ratios[:third])
+            ratio_last = _median(ratios[-third:])
+            ratio_growth = ratio_last - ratio_first
+            ratio_slope, _ratio_stderr, ratio_r2 = _ols(
+                [(sample.t, ratio) for sample, ratio in zip(samples, ratios)]
+            )
+            # The medians show direction; the fit gives the size of the move
+            # across the whole window, which a third-to-third difference
+            # understates for a linear ramp.
+            if ratio_first > 0:
+                ratio_growth_fraction = ratio_growth / ratio_first
+                ratio_trend_fraction = ratio_slope * span / ratio_first
+            else:
+                ratio_growth_fraction = 1.0 if ratio_last > 0.5 else 0.0
+                ratio_trend_fraction = ratio_growth_fraction
             entry: dict[str, Any] = {
                 "live": end,
                 "previous_live": start,
                 "growth": growth,
-                "per_connection": round(last_per_connection, 3),
-                "per_connection_growth": round(per_connection_growth, 3),
+                "per_connection": round(ratio_last, 3),
+                "per_connection_first": round(ratio_first, 3),
+                "per_connection_growth": round(ratio_growth, 3),
+                "per_connection_growth_fraction": round(ratio_growth_fraction, 3),
+                "per_connection_trend_fraction": round(ratio_trend_fraction, 3),
                 "growth_per_1000_streams": (
                     round(slope * 1000.0, 3) if span >= MIN_VERDICT_SPAN_S else None
                 ),
                 "r2": round(r2, 3),
             }
-            significant = (
-                slope > 0
-                and r2 >= 0.5
-                and growth > max(8, 0.05 * start)
-                and per_connection_growth > 0
-                and (
-                    slope > 3.0 * stderr if stderr not in (0.0, float("inf")) else True
-                )
+            if name == "connections" or name.endswith("_connections"):
+                # Connection counts are governed by the connection manager's
+                # watermarks, and a per-family count only reflects the current
+                # transport mix.  A shift from QUIC to yamux is not a leak.
+                entry["verdict"] = "INFORMATIONAL"
+                classes[name] = entry
+                continue
+            enough = (
+                stable and span >= MIN_VERDICT_SPAN_S and work_delta >= MIN_VERDICT_WORK
             )
-            if not stable or span < MIN_VERDICT_SPAN_S or work_delta < MIN_VERDICT_WORK:
+            # A leak is a *sustained* rise in resources per connection; churn is
+            # a rise with no trend.  Fit the ratio itself and require a real
+            # trend, not just a difference between two medians.
+            significant = (
+                enough
+                and ratio_trend_fraction >= 0.08
+                and ratio_slope > 0
+                and ratio_r2 >= 0.6
+                and growth > max(8, 0.05 * start)
+            )
+            if not enough:
                 entry["verdict"] = "INSUFFICIENT_DATA"
             elif significant:
                 entry["verdict"] = "LEAKING"
@@ -394,10 +454,11 @@ class LeakWatch:
                         entry["eta_minutes_to_double"] = round(
                             end / growth_per_minute, 1
                         )
-            elif per_connection_growth <= 0:
-                entry["verdict"] = "BOUNDED"
-            else:
+            elif ratio_growth_fraction >= 0.05 or (ratio_slope > 0 and ratio_r2 >= 0.4):
                 entry["verdict"] = "SUSPECT"
+            else:
+                entry["verdict"] = "BOUNDED"
+            entry["per_connection_r2"] = round(ratio_r2, 3)
             classes[name] = entry
 
         memory: dict[str, Any] = {}
@@ -415,23 +476,31 @@ class LeakWatch:
         leaks = [
             name for name, entry in classes.items() if entry["verdict"] == "LEAKING"
         ]
+        suspects = [
+            name for name, entry in classes.items() if entry["verdict"] == "SUSPECT"
+        ]
         hard_leak = orphan_count > 0 and orphan_oldest > DEFAULT_ORPHAN_AGE_S
         if hard_leak or leaks:
             state = "LEAK"
         elif not stable or span < MIN_VERDICT_SPAN_S or work_delta < MIN_VERDICT_WORK:
             state = "WARMING_UP"
+        elif suspects:
+            state = "SUSPECT"
         else:
             state = "BOUNDED"
         return {
             "state": state,
+            "evidence": "hard" if hard_leak else ("trend" if leaks else None),
             "span_seconds": round(span, 1),
             "samples": len(samples),
             "discarded_rampup_samples": anchored_from,
             "connections_stable": stable,
             "connection_range": connection_range,
+            "connection_drift_fraction": round(net_connection_drift, 3),
             "streams_opened_since_start": int(last.work.get("streams_opened", 0.0)),
             "streams_opened_in_window": int(work_delta),
             "leaking_classes": leaks,
+            "suspect_classes": suspects,
             "orphans": {
                 "count": orphan_count,
                 "oldest_age_seconds": round(orphan_oldest, 1),
@@ -442,10 +511,10 @@ class LeakWatch:
             "classes": classes,
             "memory": memory,
             "note": (
-                "verdicts are per-connection and only issued once the peer "
-                "population is stable; orphan ages are lower bounds (streams "
-                "predating the sampler are stamped at start), so a hard_leak "
-                "verdict cannot be a false positive"
+                "verdicts are per-connection medians and are only issued once "
+                "the peer population is stable; orphan ages are lower bounds "
+                "(streams predating the sampler are stamped at start), so a "
+                "hard_leak verdict cannot be a false positive"
             ),
         }
 

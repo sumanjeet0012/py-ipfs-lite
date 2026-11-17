@@ -60,6 +60,88 @@ def test_leak_is_detected_in_a_two_minute_window() -> None:
     assert entry["growth"] > 9
 
 
+def test_churn_is_not_mistaken_for_a_leak() -> None:
+    """
+    Stream counts sawtooth as cohorts open and are swept.
+
+    A real node held yamux streams between 451 and 596 while its peer count
+    held near 400; comparing endpoints of that series produced a false LEAK.
+    A verdict must require a sustained per-connection trend, not a difference.
+    """
+    samples = []
+    for index, t in enumerate(range(0, 181, 6)):
+        live = 500 + (70 if index % 2 else -70)
+        samples.append((float(t), t * 50.0, live))
+    report = _watch_with(samples).report()
+    entry = report["classes"]["quic_streams"]
+    assert entry["verdict"] != "LEAKING"
+    assert report["state"] != "LEAK"
+
+
+def test_sustained_per_connection_trend_is_still_caught() -> None:
+    """Requiring a trend must not blind the detector to a real one."""
+    samples = []
+    for index, t in enumerate(range(0, 181, 6)):
+        # Sawtooth churn plus a steady 12%-per-window leak underneath it.
+        live = 500 + (40 if index % 2 else -40) + index * 6
+        samples.append((float(t), t * 50.0, live))
+    report = _watch_with(samples).report()
+    entry = report["classes"]["quic_streams"]
+    assert entry["verdict"] == "LEAKING"
+    assert entry["per_connection_growth_fraction"] >= 0.10
+    assert report["state"] == "LEAK"
+    assert report["evidence"] == "trend"
+
+
+def test_real_node_transport_shift_is_not_a_leak() -> None:
+    """
+    Replay of six samples taken from the production node.
+
+    QUIC connections fell 130 -> 102 while yamux rose 264 -> 284 and the total
+    held near 400.  The old endpoint comparison called yamux_connections a leak;
+    it is just the transport mix changing, and connection counts are bounded by
+    the connection manager's watermarks in any case.
+    """
+    observed = [
+        (402, 264, 556, 130, 112),
+        (411, 274, 596, 129, 111),
+        (402, 264, 475, 127, 110),
+        (387, 267, 478, 109, 80),
+        (398, 277, 451, 112, 84),
+        (395, 284, 494, 102, 71),
+    ]
+    watch = LeakWatch(peer=None)
+    for index, (
+        conns,
+        yamux_conns,
+        yamux_streams,
+        quic_conns,
+        quic_streams,
+    ) in enumerate(observed):
+        watch._samples.append(
+            Sample(
+                t=float(index * 30),
+                wall=0.0,
+                connections=conns,
+                live={
+                    "connections": conns,
+                    "yamux_connections": yamux_conns,
+                    "yamux_streams": yamux_streams,
+                    "quic_connections": quic_conns,
+                    "quic_streams": quic_streams,
+                    "quic_orphans": 3,
+                },
+                work={"streams_opened": index * 170.0},
+                mem={},
+            )
+        )
+    report = watch.report()
+    assert report["state"] == "BOUNDED"
+    assert report["classes"]["yamux_connections"]["verdict"] == "INFORMATIONAL"
+    assert report["classes"]["yamux_streams"]["verdict"] == "BOUNDED"
+    assert report["classes"]["connections"]["verdict"] == "INFORMATIONAL"
+
+
 def test_warmup_is_reported_as_warmup_not_as_bounded() -> None:
     """Refusing to answer is the correct answer before there is evidence."""
     samples = [(float(t), t * 50.0, 300) for t in range(0, 41, 4)]
