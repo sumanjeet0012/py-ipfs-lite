@@ -77,6 +77,10 @@ def test_quic_stream_census_separates_wrapped_streams_from_orphans():
         "orphan_streams": 1,
         "orphan_unfinished": 1,
         "finished_not_discarded": 1,
+        "blocked_bidi": 0,
+        "blocked_uni": 0,
+        "blocked_finished": 0,
+        "blocked_absent": 0,
     }
     assert result["states"] == {
         "sf=0 rf=0 peer_initiated=0 orphan=0": 1,
@@ -86,6 +90,30 @@ def test_quic_stream_census_separates_wrapped_streams_from_orphans():
     assert result["worst_connections"] == [
         {"orphans": 1, "peer_id": "peer-a", "streams": 3}
     ]
+
+
+def test_quic_stream_census_counts_streams_stuck_in_blocked_lists():
+    """Blocked-direction lists hold streams the main registry no longer shows."""
+
+    class Quic:
+        configuration = SimpleNamespace(is_client=True)
+        _streams = {}
+        _streams_blocked_bidi = [
+            SimpleNamespace(stream_id=4, is_finished=True),
+            SimpleNamespace(stream_id=8, is_finished=False),
+        ]
+        _streams_blocked_uni = [SimpleNamespace(stream_id=2, is_finished=False)]
+
+    class Muxed:
+        _quic = Quic()
+        _streams = {}
+
+    conn = SimpleNamespace(muxed_conn=Muxed(), peer_id="peer-a")
+    result = quic_stream_census(SimpleNamespace(connections={"peer-a": [conn]}))
+    assert result["totals"]["blocked_bidi"] == 2
+    assert result["totals"]["blocked_uni"] == 1
+    assert result["totals"]["blocked_finished"] == 1
+    assert result["totals"]["blocked_absent"] == 2
 
 
 def test_connection_closed_reads_both_bool_and_method_forms():

@@ -197,6 +197,12 @@ def quic_stream_census(network: Any) -> dict[str, Any]:
     (ignored late events, refused inbound streams) therefore stays in that
     dict forever. Splitting the population by finished state and by whether a
     py-libp2p wrapper exists separates live traffic from abandoned streams.
+
+    aioquic also keeps every stream that exceeded the peer's stream-credit
+    allowance in ``_streams_blocked_bidi``/``_streams_blocked_uni`` and only
+    edits those lists when more credit arrives, so finished streams can be
+    retained there after leaving ``_streams``. Count them separately: they are
+    invisible to a census that only walks the main registry.
     """
     totals = {
         "connections": 0,
@@ -205,6 +211,10 @@ def quic_stream_census(network: Any) -> dict[str, Any]:
         "orphan_streams": 0,
         "orphan_unfinished": 0,
         "finished_not_discarded": 0,
+        "blocked_bidi": 0,
+        "blocked_uni": 0,
+        "blocked_finished": 0,
+        "blocked_absent": 0,
     }
     states: Counter[str] = Counter()
     orphan_detail: Counter[str] = Counter()
@@ -225,6 +235,18 @@ def quic_stream_census(network: Any) -> dict[str, Any]:
             totals["connections"] += 1
             totals["streams"] += len(streams)
             totals["wrappers"] += len(wrapper_ids)
+            for label, blocked in (
+                ("blocked_bidi", getattr(quic, "_streams_blocked_bidi", None)),
+                ("blocked_uni", getattr(quic, "_streams_blocked_uni", None)),
+            ):
+                if not isinstance(blocked, list):
+                    continue
+                totals[label] += len(blocked)
+                for blocked_stream in blocked:
+                    if getattr(blocked_stream, "is_finished", False):
+                        totals["blocked_finished"] += 1
+                    elif getattr(blocked_stream, "stream_id", None) not in streams:
+                        totals["blocked_absent"] += 1
             orphans = 0
             for stream_id, stream in list(streams.items()):
                 sender = getattr(stream, "sender", None)
