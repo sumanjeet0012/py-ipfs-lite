@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from py_ipfs_lite.connection_tracker import ConnectionStatsTracker
+from py_ipfs_lite.services.swarm_service import list_connected_peers
 
 
 class _FakeMuxedConn:
@@ -726,3 +727,110 @@ async def test_connection_stats_lru_access_refresh():
     assert "peer1" in tracker.stats
     assert "peer3" in tracker.stats
     assert "peer4" in tracker.stats
+
+
+def _fake_peer(network: object, tracker: ConnectionStatsTracker) -> SimpleNamespace:
+    """Peer stand-in exposing the host/network surfaces the service reads."""
+    peerstore = SimpleNamespace(addrs=lambda _pid: [])
+    raw_host = SimpleNamespace(
+        get_network=lambda: network,
+        get_peerstore=lambda: peerstore,
+    )
+    return SimpleNamespace(
+        host=SimpleNamespace(_host=raw_host), connection_tracker=tracker
+    )
+
+
+@pytest.mark.trio
+async def test_enforce_capacity_keeps_live_connection_metadata():
+    """
+    Crossing the _conn_meta cap must not evict metadata for live connections.
+
+    Age is not staleness: pruning metadata of connections that have been up
+    for longer than the old 600 s cutoff made healthy peers report
+    ``connected_at: null`` and ``duration_seconds: 0.0`` on /swarm/peers.
+    """
+    tracker = ConnectionStatsTracker(max_stats_capacity=3)
+    network = _fake_network({})
+    tracker._network = network
+
+    for i in range(260):
+        pid = f"peer{i}"
+        conn = _FakeConn(_FakeMuxedConn(pid))
+        network.connections[_FakePeerID(pid)] = [conn]
+        await tracker.connected(network, conn)
+
+    # Every one of these connections has been alive well past 600 s.
+    for meta in tracker._conn_meta.values():
+        meta["start_mono"] -= 700.0
+
+    # A 261st connect overflows ``stats`` and runs the capacity sweep.
+    new_conn = _FakeConn(_FakeMuxedConn("peerNew"))
+    network.connections[_FakePeerID("peerNew")] = [new_conn]
+    await tracker.connected(network, new_conn)
+
+    assert len(tracker._conn_meta) == 2 * 261
+    snap = await list_connected_peers(_fake_peer(network, tracker))
+    durations = {p["peer"]: p["duration_seconds"] for p in snap.peers}
+    assert all(durations[f"peer{i}"] >= 700.0 for i in range(260))
+    # Only the connection that genuinely just connected reads as young.
+    assert durations["peerNew"] < 5.0
+
+
+@pytest.mark.trio
+async def test_enforce_capacity_prunes_dead_connection_metadata():
+    """Metadata left behind by a missed disconnect notifee is still evicted."""
+    tracker = ConnectionStatsTracker(max_stats_capacity=3)
+    network = _fake_network({})
+    tracker._network = network
+
+    conns = []
+    for i in range(260):
+        pid = f"peer{i}"
+        conn = _FakeConn(_FakeMuxedConn(pid))
+        network.connections[_FakePeerID(pid)] = [conn]
+        await tracker.connected(network, conn)
+        conns.append((pid, conn))
+
+    for meta in tracker._conn_meta.values():
+        meta["start_mono"] -= 700.0
+
+    # The swarm drops the first 200 connections without a notifee reaching us.
+    for pid, _conn in conns[:200]:
+        del network.connections[_FakePeerID(pid)]
+
+    new_conn = _FakeConn(_FakeMuxedConn("peerNew"))
+    network.connections[_FakePeerID("peerNew")] = [new_conn]
+    await tracker.connected(network, new_conn)
+
+    # Only the 60 still-registered connections (plus the new one) keep metadata.
+    assert len(tracker._conn_meta) == 2 * 61
+    live_peers = {meta["peer_id"] for meta in tracker._conn_meta.values()}
+    assert "peer0" not in live_peers
+    assert "peer259" in live_peers
+
+
+@pytest.mark.trio
+async def test_swarm_peers_recovers_age_without_conn_metadata():
+    """
+    A live connection with no tracker metadata still reports a real age.
+
+    Uses the connection's own creation time and the live connection details
+    instead of falling back to a misleading 0 s / unknown transport.
+    """
+    tracker = ConnectionStatsTracker()
+    network = _fake_network({})
+    tracker._network = network
+
+    conn = _FakeConn(_FakeMuxedConn("peer1"))
+    conn._created_at = time.time() - 120.0
+    network.connections[_FakePeerID("peer1")] = [conn]
+    # Deliberately no tracker.connected(): metadata is absent.
+
+    snap = await list_connected_peers(_fake_peer(network, tracker))
+
+    assert snap.count == 1
+    entry = snap.peers[0]
+    assert entry["connected_at"] is not None
+    assert 118.0 <= entry["duration_seconds"] <= 125.0
+    assert entry["age_tier"] == "2m_to_5m"

@@ -304,6 +304,10 @@ class ConnectionStatsTracker(INotifee):
         self.total_streams_by_protocol_outbound: dict[str, int] = {}
         self.total_streams_by_protocol_inbound: dict[str, int] = {}
         self._conn_meta: dict[int, dict[str, Any]] = {}
+        # Two keys are stored per live connection (the SwarmConn and its
+        # underlying muxed connection), so a busy node legitimately holds more
+        # entries than this.  The bound only forces a sweep of *dead* entries.
+        self._conn_meta_capacity: int = 500
         self.recent_disconnections: deque[dict[str, Any]] = deque(maxlen=500)
 
         # Keys of streams that were already finalized (closed).  Guards against
@@ -614,15 +618,37 @@ class ConnectionStatsTracker(INotifee):
             for k in list(self._peer_lifetime.keys())[:300]:
                 self._peer_lifetime.pop(k, None)
 
-        if len(self._conn_meta) > 500:
-            now_mono = time.monotonic()
-            stale_keys = [
-                k
-                for k, v in self._conn_meta.items()
-                if now_mono - v.get("start_mono", now_mono) > 600.0
-            ]
-            for k in stale_keys[:300]:
-                self._conn_meta.pop(k, None)
+        self._prune_conn_meta()
+
+    def _prune_conn_meta(self) -> None:
+        """
+        Evict connection metadata that belongs to connections no longer live.
+
+        Age is not staleness: a connection that has been up for hours is still
+        live, and its metadata is the only record of when it connected.  The
+        previous sweep removed every entry older than 600 s once the map
+        exceeded its cap, so healthy long-lived peers reported
+        ``connected_at: null`` and ``duration_seconds: 0.0`` (with transport and
+        direction "unknown") on /swarm/peers after each sweep.
+
+        The swarm's live connection table is the authority instead: an entry
+        absent from it is a leftover from a missed ``disconnected`` notifee and
+        can be dropped, oldest first.  Entries for live connections are never
+        evicted, whatever their age.
+        """
+        if len(self._conn_meta) <= self._conn_meta_capacity:
+            return
+        if self._network is None:
+            # No liveness information available: keep the data rather than
+            # guessing which connections are gone.
+            return
+        live_ids, _ = self._live_conn_ids()
+        dead_keys = [k for k in self._conn_meta if k not in live_ids]
+        if not dead_keys:
+            return
+        dead_keys.sort(key=lambda k: self._conn_meta[k].get("start_mono", 0.0))
+        for k in dead_keys:
+            self._conn_meta.pop(k, None)
 
     async def listen(self, network: INetwork, multiaddr: Multiaddr) -> None:
         self._network = network

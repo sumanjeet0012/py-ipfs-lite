@@ -4,11 +4,14 @@ When those internals shift (as they have before), this is the one place to fix.
 """
 
 import logging
+import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import HTTPException
 
+from py_ipfs_lite.connection_tracker import _extract_conn_details
 from py_ipfs_lite.peer import Peer
 
 logger = logging.getLogger("py_ipfs_lite.swarm_service")
@@ -20,10 +23,36 @@ class SwarmPeers:
     peers: list[dict[str, Any]]
 
 
+def _iso_timestamp(epoch_seconds: float) -> str:
+    return datetime.fromtimestamp(epoch_seconds, tz=timezone.utc).isoformat(
+        timespec="milliseconds"
+    )
+
+
+def _seconds_since(iso_ts: str | None) -> float | None:
+    if not iso_ts:
+        return None
+    try:
+        then = datetime.fromisoformat(iso_ts)
+    except ValueError:
+        return None
+    if then.tzinfo is None:
+        then = then.replace(tzinfo=timezone.utc)
+    return round(max(0.0, (datetime.now(timezone.utc) - then).total_seconds()), 1)
+
+
+def _conn_started_at(conn: Any) -> str | None:
+    """Wall-clock start of a live connection, when the transport records it."""
+    for obj in (conn, getattr(conn, "muxed_conn", None)):
+        created = getattr(obj, "_created_at", None)
+        if isinstance(created, (int, float)):
+            return _iso_timestamp(float(created))
+    return None
+
+
 async def list_connected_peers(peer: Peer) -> SwarmPeers:
     if peer.host is None:
         return SwarmPeers(count=0, peers=[])
-    import time
     import typing
 
     raw_host = typing.cast(typing.Any, getattr(peer.host, "_host", peer.host))
@@ -58,8 +87,8 @@ async def list_connected_peers(peer: Peer) -> SwarmPeers:
         # Prefer active transport address(es) from the live connection(s),
         # falling back to bounded peerstore addresses (max 3) to keep payload compact.
         addrs: list[str] = []
-        if conns:
-            conn_list = conns if isinstance(conns, list) else [conns]
+        conn_list = conns if isinstance(conns, list) else ([conns] if conns else [])
+        if conn_list:
             for c in conn_list:
                 try:
                     t_addrs = c.get_transport_addresses()
@@ -84,16 +113,36 @@ async def list_connected_peers(peer: Peer) -> SwarmPeers:
             addrs = addrs[:3]
 
         meta = conn_meta_map.get(pid_str)
-        duration_secs = (
-            round(now_mono - meta["start_mono"], 1)
-            if meta and "start_mono" in meta
-            else 0.0
-        )
-        connected_at = meta.get("connected_at") if meta else None
-        transport = meta.get("transport", "unknown") if meta else "unknown"
-        direction = meta.get("direction", "unknown") if meta else "unknown"
+        if meta and "start_mono" in meta:
+            connected_at = meta.get("connected_at")
+            duration_secs = round(now_mono - meta["start_mono"], 1)
+            transport = meta.get("transport", "unknown")
+            direction = meta.get("direction", "unknown")
+        else:
+            # The tracker never received (or already released) this
+            # connection's metadata.  Falling back to 0.0 made healthy peers
+            # look like they had just connected, so recover what we can from
+            # the live connection itself, then from the tracker's per-peer
+            # connect timestamps.
+            live_details = _extract_conn_details(conn_list[0]) if conn_list else {}
+            transport = live_details.get("transport", "unknown")
+            direction = live_details.get("direction", "unknown")
+            starts = [s for s in map(_conn_started_at, conn_list) if s]
+            stats = tracker.stats.get(pid_str) if tracker else None
+            connected_at = (
+                min(starts)
+                if starts
+                else (
+                    (stats.last_connected_at or stats.first_connected_at)
+                    if stats
+                    else None
+                )
+            )
+            duration_secs = _seconds_since(connected_at)
 
-        if duration_secs >= 1800.0:
+        if duration_secs is None:
+            age_tier = "unknown"
+        elif duration_secs >= 1800.0:
             age_tier = "over_30m"
         elif duration_secs >= 600.0:
             age_tier = "10m_to_30m"
@@ -129,7 +178,7 @@ async def list_connected_peers(peer: Peer) -> SwarmPeers:
         )
 
     # Sort peers by duration descending (longest-lived stable peers first)
-    result.sort(key=lambda p: p.get("duration_seconds", 0.0), reverse=True)
+    result.sort(key=lambda p: p.get("duration_seconds") or 0.0, reverse=True)
     return SwarmPeers(count=len(result), peers=result)
 
 
