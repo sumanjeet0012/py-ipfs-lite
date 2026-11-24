@@ -42,10 +42,18 @@ class NamingMixin:
         t_val = timeout if timeout is not None else self.config.default_timeout
         from libp2p.peer.id import ID
 
+        from py_ipfs_lite.exceptions import InvalidCidError
         from py_ipfs_lite.ipns import resolve_name as ipns_resolve
 
-        # We need to look up the routing
-        peer_id = ID.from_base58(peer_id_str)
+        clean_id_str = (
+            peer_id_str.removeprefix("/ipns/")
+            if peer_id_str.startswith("/ipns/")
+            else peer_id_str
+        )
+        try:
+            peer_id = ID.from_base58(clean_id_str)
+        except Exception as e:
+            raise InvalidCidError(f"Invalid IPNS name: {peer_id_str}") from e
         try:
             with trio.fail_after(t_val):
                 return await ipns_resolve(self.routing, peer_id)

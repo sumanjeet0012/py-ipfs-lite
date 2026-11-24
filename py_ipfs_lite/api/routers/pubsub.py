@@ -55,11 +55,28 @@ async def pubsub_pub(
     request: Request,
     arg: str = Query(..., description="The topic to publish to"),
 ) -> Any:
-    """Publish a message (raw request body) to a pubsub topic."""
+    """Publish a message to a pubsub topic."""
+    from fastapi import UploadFile
+
     peer: Peer = request.app.state.peer
     if getattr(peer, "pubsub", None) is None:
         raise HTTPException(status_code=400, detail="pubsub not enabled")
-    body = await request.body()
+
+    content_type = request.headers.get("content-type", "")
+    if "multipart/form-data" in content_type:
+        form = await request.form()
+        file_field = form.get("file") or form.get("data")
+        if not file_field and form.keys():
+            file_field = form[list(form.keys())[0]]
+        if isinstance(file_field, UploadFile):
+            body = await file_field.read()
+        elif file_field is not None:
+            body = str(file_field).encode("utf-8")
+        else:
+            body = b""
+    else:
+        body = await request.body()
+
     if not body:
         raise HTTPException(status_code=400, detail="Empty message body")
     await peer.publish_pubsub(arg, body)
@@ -105,6 +122,7 @@ async def pubsub_sub(
 
 
 @router.delete("/api/v0/pubsub/sub")
+@router.post("/api/v0/pubsub/unsub")
 async def pubsub_unsub(
     request: Request,
     arg: str = Query(..., description="The topic to unsubscribe from"),

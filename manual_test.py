@@ -68,6 +68,9 @@ def test_endpoint(method, path, description, data=None, files=None, check_fn=Non
                 req.add_header(
                     "Content-Type", f"multipart/form-data; boundary={boundary}"
                 )
+            elif data is not None:
+                req = urllib.request.Request(url, data=data, method="POST")
+                req.add_header("Content-Type", "application/json")
             else:
                 req = urllib.request.Request(url, data=b"", method="POST")
         elif method == "DELETE":

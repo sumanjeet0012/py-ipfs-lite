@@ -4,7 +4,7 @@ import json
 from typing import Any
 
 import trio
-from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, HTTPException, Query, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
 
 from py_ipfs_lite.api.routers._shared import local_block
@@ -16,10 +16,14 @@ router = APIRouter()
 
 @router.post("/api/v0/dag/put")
 async def dag_put(
-    request: Request, store_codec: str = Query("dag-json", alias="store-codec")
+    request: Request,
+    store_codec: str = Query("dag-json", alias="store-codec"),
+    format: str | None = Query(None),
+    input_enc: str = Query("json", alias="input-enc"),
 ) -> Any:
     """Store a generic DAG node."""
     peer: Peer = request.app.state.peer
+    codec = format if format else store_codec
 
     content_type = request.headers.get("content-type", "")
     if "multipart/form-data" in content_type:
@@ -38,10 +42,18 @@ async def dag_put(
         body = await request.body()
 
     try:
-        node_data = json.loads(body)
+        try:
+            node_data = json.loads(body)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            if codec in ("dag-cbor", "cbor") or input_enc in ("cbor", "raw"):
+                import cbor2
+
+                node_data = cbor2.loads(body)
+            else:
+                raise
         from py_ipfs_lite.services import dag_service
 
-        result = await dag_service.put_node(peer, node_data, codec=store_codec)
+        result = await dag_service.put_node(peer, node_data, codec=codec)
         return JSONResponse(content={"Cid": {"/": result.cid}})
     except (json.JSONDecodeError, RecursionError) as e:
         raise HTTPException(status_code=400, detail=f"{str(e)} | Body: {repr(body)}")
@@ -111,13 +123,16 @@ async def dag_export(
 
 
 @router.post("/api/v0/dag/import")
-async def dag_import(request: Request, file: UploadFile = File(...)) -> Any:
+async def dag_import(request: Request, file: UploadFile | None = None) -> Any:
     """Import a CAR file into the blockstore. Returns the root CIDs found."""
     import os
     import tempfile
 
     peer: Peer = request.app.state.peer
-    data = await file.read()
+    if file is not None and hasattr(file, "read"):
+        data = await file.read()
+    else:
+        data = await request.body()
     if not data:
         raise HTTPException(status_code=400, detail="Empty CAR payload")
 
@@ -142,7 +157,12 @@ async def refs_local_object(
     recursive: bool = Query(False, description="Walk the whole DAG"),
 ) -> Any:
     """List references (child links) of a local DAG node."""
-    from libp2p.bitswap.cid import parse_cid as _parse_cid_raw
+    from libp2p.bitswap.cid import (
+        format_cid_for_display,
+    )
+    from libp2p.bitswap.cid import (
+        parse_cid as _parse_cid_raw,
+    )
 
     from py_ipfs_lite.dag_utils import extract_cids
 
@@ -153,7 +173,7 @@ async def refs_local_object(
 
     def _cid_str(raw: bytes) -> str | None:
         try:
-            return str(_parse_cid_raw(raw))
+            return format_cid_for_display(_parse_cid_raw(raw))
         except Exception:
             return None
 
@@ -185,12 +205,27 @@ async def refs_local_object(
             pass
 
         # dag-cbor / dag-json: structural CID extraction
-        for raw in extract_cids(data):
-            child = _cid_str(raw)
-            if child is not None and child not in {r["Ref"] for r in out}:
-                out.append({"Ref": child})
-        if recursive:
-            pass  # structural walk handled by extract_cids above (non-recursive)
+        parsed_c = _parse_cid_raw(cid_str)
+        codec = getattr(parsed_c, "codec", None)
+        decoded = None
+        if codec in ("dag-json", "dag-cbor", "cbor"):
+            from py_ipfs_lite.peer import decode_node
+
+            try:
+                decoded = decode_node(data, codec)
+            except Exception:
+                pass
+        if decoded is not None:
+            cids_found = extract_cids(decoded)
+            for raw in cids_found:
+                child = _cid_str(raw)
+                if child is not None and child not in {r["Ref"] for r in out}:
+                    out.append({"Ref": child})
+            if recursive:
+                for raw in cids_found:
+                    child = _cid_str(raw)
+                    if child:
+                        await visit(child)
 
     await visit(arg)
     return JSONResponse(content={"Refs": out})

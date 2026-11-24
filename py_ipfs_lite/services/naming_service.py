@@ -1,3 +1,4 @@
+from py_ipfs_lite.exceptions import InvalidCidError
 from py_ipfs_lite.peer import Peer
 
 
@@ -9,4 +10,8 @@ async def publish_name(peer: Peer, arg: str, lifetime_hours: int = 24) -> str:
 
 
 async def resolve_name(peer: Peer, name: str) -> str:
-    return await peer.resolve_name(name)
+    clean_name = name.removeprefix("/ipns/") if name.startswith("/ipns/") else name
+    try:
+        return await peer.resolve_name(clean_name)
+    except ValueError as e:
+        raise InvalidCidError(f"Invalid IPNS name: {name}") from e

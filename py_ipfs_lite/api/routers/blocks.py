@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, HTTPException, Query, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
 
 from py_ipfs_lite.peer import Peer
@@ -11,6 +11,7 @@ router = APIRouter()
 
 
 @router.post("/api/v0/block/stat")
+@router.get("/api/v0/block/stat")
 async def block_stat(
     request: Request,
     arg: str = Query(
@@ -40,15 +41,19 @@ async def block_get(
 
 
 @router.post("/api/v0/block/put")
-async def block_put(request: Request, file: UploadFile = File(...)) -> Any:
+async def block_put(request: Request, file: UploadFile | None = None) -> Any:
     """Store a raw IPFS block."""
     peer: Peer = request.app.state.peer
     from py_ipfs_lite.services import block_service
 
-    if not hasattr(file, "read"):
+    if file is not None and hasattr(file, "read"):
+        data = await file.read()
+    else:
+        data = await request.body()
+
+    if not data:
         raise HTTPException(status_code=400, detail="Missing or invalid file")
 
-    data = await file.read()
     cid_str = await block_service.put_block(peer, data)
     return JSONResponse(content={"Key": cid_str, "Size": len(data)})
 

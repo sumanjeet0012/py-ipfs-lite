@@ -232,7 +232,12 @@ async def connect_peer(peer: Peer, addr: str) -> None:
         raise HTTPException(
             status_code=400, detail=f"Invalid peer address: {addr}"
         ) from e
-    await peer.host.connect(info)
+    try:
+        await peer.host.connect(info)
+    except Exception as e:
+        raise HTTPException(
+            status_code=502, detail=f"Failed to connect to peer {addr}: {e}"
+        ) from e
 
 
 async def disconnect_peer(peer: Peer, peer_id_str: str) -> None:
@@ -262,7 +267,12 @@ async def disconnect_peer(peer: Peer, peer_id_str: str) -> None:
                 status_code=400, detail=f"Invalid peer ID: {peer_id_str}"
             ) from e
 
-    await peer.host.disconnect(peer_id)
+    try:
+        await peer.host.disconnect(peer_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to disconnect from peer: {e}"
+        ) from e
 
 
 def _resolve_peer_id(peer: Peer, peer_id_str: str) -> Any:
@@ -322,8 +332,9 @@ async def unprotect_peer(peer: Peer, peer_id_str: str, tag: str) -> dict[str, An
 
     peer_id = _resolve_peer_id(peer, peer_id_str)
     tag_store = _tag_store_for(peer)
-    removed = tag_store.unprotect(peer_id, tag)
-    return {"Peers": [str(peer_id)], "Tag": tag, "Removed": bool(removed)}
+    was_protected = tag in getattr(tag_store, "_protected", {}).get(peer_id, set())
+    tag_store.unprotect(peer_id, tag)
+    return {"Peers": [str(peer_id)], "Tag": tag, "Removed": was_protected}
 
 
 async def list_protected_peers(peer: Peer) -> list[dict[str, Any]]:
@@ -351,7 +362,7 @@ async def list_protected_peers(peer: Peer) -> list[dict[str, Any]]:
 async def list_peer_tags(peer: Peer) -> dict[str, Any]:
     """List every tagged peer with its full tag map, values and protections."""
     if peer.host is None:
-        return []
+        return {"count": 0, "peers": []}
     tag_store = _tag_store_for(peer)
     protected_map = getattr(tag_store, "_protected", {})
     result = []

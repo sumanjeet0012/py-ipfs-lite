@@ -44,13 +44,22 @@ async def pin_rm(
 @router.post("/api/v0/pin/ls")
 @router.get("/api/v0/pin/ls")
 async def pin_ls(
-    request: Request, type_filter: str = Query("all", alias="type")
+    request: Request,
+    type_filter: str = Query("all", alias="type"),
+    arg: str | None = Query(None, description="CID to check"),
 ) -> Any:
     """List pins."""
     peer: Peer = request.app.state.peer
+    from py_ipfs_lite.exceptions import PinNotFoundError
     from py_ipfs_lite.services import pin_service
 
     pins = await pin_service.list_pins(peer, type_filter)
+
+    if arg:
+        if arg in pins:
+            pins = {arg: pins[arg]}
+        else:
+            raise PinNotFoundError(f"path {arg!r} is not pinned")
 
     formatted_keys = {}
     for cid_str, type_str in pins.items():

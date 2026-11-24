@@ -61,6 +61,7 @@ async def swarm_stream_stats(request: Request) -> Any:
     )
 
 
+@router.post("/api/v0/swarm/connection_metrics")
 @router.get("/api/v0/swarm/connection_metrics")
 async def debug_connection_stats(request: Request) -> Any:
     """
@@ -152,6 +153,7 @@ async def swarm_unprotect(
     return JSONResponse(content=result)
 
 
+@router.post("/api/v0/swarm/protection")
 @router.get("/api/v0/swarm/protection")
 async def swarm_protection(request: Request) -> Any:
     """List all protected peers with their protection tags and values."""

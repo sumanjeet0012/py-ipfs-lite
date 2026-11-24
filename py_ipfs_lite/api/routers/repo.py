@@ -25,6 +25,7 @@ async def repo_gc(request: Request) -> Any:
 
 
 @router.post("/api/v0/refs/local")
+@router.get("/api/v0/refs/local")
 async def refs_local(request: Request) -> Any:
     """List all CIDs stored in the local blockstore."""
     peer: Peer = request.app.state.peer

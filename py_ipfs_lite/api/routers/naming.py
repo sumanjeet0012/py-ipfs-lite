@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
 from py_ipfs_lite.peer import Peer
@@ -20,14 +20,22 @@ async def name_publish(
     peer: Peer = request.app.state.peer
     from py_ipfs_lite.services import naming_service
 
-    # Parse lifetime: "24h", "3600s", or plain number (hours)
-    lifetime_hours = 24
-    if lifetime.endswith("h"):
-        lifetime_hours = int(lifetime[:-1])
-    elif lifetime.endswith("s"):
-        lifetime_hours = max(1, int(lifetime[:-1]) // 3600)
-    else:
-        lifetime_hours = int(lifetime)
+    # Parse lifetime: "24h", "7d", "30m", "3600s", or plain number (hours)
+    try:
+        if lifetime.endswith("d"):
+            lifetime_hours = max(1, int(lifetime[:-1]) * 24)
+        elif lifetime.endswith("h"):
+            lifetime_hours = max(1, int(lifetime[:-1]))
+        elif lifetime.endswith("m"):
+            lifetime_hours = max(1, int(lifetime[:-1]) // 60)
+        elif lifetime.endswith("s"):
+            lifetime_hours = max(1, int(lifetime[:-1]) // 3600)
+        else:
+            lifetime_hours = max(1, int(lifetime))
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=400, detail=f"Invalid lifetime format: {lifetime}"
+        )
 
     result_name = await naming_service.publish_name(
         peer, arg, lifetime_hours=lifetime_hours
@@ -43,7 +51,11 @@ async def name_resolve(
 ) -> Any:
     """Resolve an IPNS record."""
     peer: Peer = request.app.state.peer
+    from py_ipfs_lite.exceptions import InvalidCidError
     from py_ipfs_lite.services import naming_service
 
-    path = await naming_service.resolve_name(peer, arg)
+    try:
+        path = await naming_service.resolve_name(peer, arg)
+    except (InvalidCidError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=f"Invalid IPNS name: {arg}") from e
     return JSONResponse(content={"Path": path})
