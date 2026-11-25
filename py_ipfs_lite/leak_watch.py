@@ -164,6 +164,39 @@ def _median(values: list[float]) -> float:
     return (ordered[middle - 1] + ordered[middle]) / 2.0
 
 
+# One minute at the 10 s default interval. Medians of a few samples absorb the
+# connection manager's sawtooth; a single spike or dip must not move the anchor.
+RAMPUP_BUCKET_SAMPLES = 6
+
+
+def _rampup_anchor(samples: list[Sample]) -> int:
+    """
+    Index of the first sample in the settled population, or 0 if never ramping.
+
+    Only a *leading* stretch that sits clearly below the settled level counts as
+    ramp-up; mid-window dips are churn, not a new population. The settled level
+    is the median of the trailing buckets, not the last sample: using the last
+    sample made the anchor flip whenever a connection spike (e.g. 596 against a
+    500-level sawtooth) landed on the newest sample, discarding hours of
+    evidence and turning a transient ratio rise into a LEAK verdict.
+    """
+    if not samples:
+        return 0
+    bucket = min(len(samples), RAMPUP_BUCKET_SAMPLES)
+    level = _median([float(s.connections) for s in samples[-3 * bucket :]])
+    if level <= 0:
+        return 0
+    low_water = 0.85 * level
+    anchor = 0
+    for start in range(0, len(samples) - bucket + 1, bucket):
+        window = samples[start : start + bucket]
+        if _median([float(s.connections) for s in window]) < low_water:
+            anchor = start + bucket
+        else:
+            break
+    return anchor
+
+
 def _ols(points: list[tuple[float, float]]) -> tuple[float, float, float]:
     """Least squares slope, its standard error and r² for (x, y) points."""
     n = len(points)
@@ -431,13 +464,7 @@ class LeakWatch:
         # "wait an hour and see" becomes the default.  Anchor the analysis on
         # the trailing period during which the peer population was stable, and
         # refuse to judge anything if there is no such period yet.
-        final_connections = samples[-1].connections
-        anchored_from = 0
-        if final_connections > 0:
-            low_water = 0.85 * final_connections
-            below = [i for i, s in enumerate(samples) if s.connections < low_water]
-            if below:
-                anchored_from = below[-1] + 1
+        anchored_from = _rampup_anchor(samples)
         stable = len(samples) - anchored_from >= MIN_STABLE_SAMPLES
         if stable:
             samples = samples[anchored_from:]

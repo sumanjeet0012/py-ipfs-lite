@@ -186,6 +186,36 @@ def test_verdict_anchors_after_rampup_and_then_bounds() -> None:
     assert report["classes"]["quic_streams"]["per_connection_growth"] == 0.0
 
 
+def test_connection_spike_on_latest_sample_does_not_reanchor() -> None:
+    """
+    The ramp-up anchor must not depend on the newest connection count.
+
+    Production saw a 500-level connection sawtooth with a brief spike to 596.
+    The old anchor used 85% of the *last* sample, so the spike declared the
+    previous 4.4h to be ramp-up and a transient per-connection rise became
+    LEAK; one sample later the same history read BOUNDED over the full window.
+    """
+    connections = [470 if i % 2 else 505 for i in range(1573)]
+    connections += [520 if i % 2 else 550 for i in range(587)]
+    samples = [
+        (float(index * 10), index * 50.0, int(count * 0.6))
+        for index, count in enumerate(connections)
+    ]
+
+    calm_counts = list(connections)
+    calm_counts[-1] = 542
+    spike_counts = list(connections)
+    spike_counts[-1] = 596
+
+    calm = _watch_with(samples, calm_counts).report()
+    spike = _watch_with(samples, spike_counts).report()
+
+    assert calm["discarded_rampup_samples"] == 0
+    assert spike["discarded_rampup_samples"] == 0
+    assert calm["span_seconds"] == spike["span_seconds"]
+    assert calm["state"] == spike["state"] == "BOUNDED"
+
+
 def test_orphan_age_is_a_zero_false_positive_test() -> None:
     """A wrappless stream older than any retention window is proof."""
     watch = _watch_with([(float(t), t * 50.0, 300) for t in range(0, 121, 4)])
