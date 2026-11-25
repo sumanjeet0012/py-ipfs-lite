@@ -550,7 +550,9 @@ class LeakWatch:
                         entry["eta_minutes_to_double"] = round(
                             end / growth_per_minute, 1
                         )
-            elif full.growth_fraction >= 0.05 or (full.slope > 0 and full.r2 >= 0.4):
+            elif growth > 8 and (
+                full.growth_fraction >= 0.05 or (full.slope > 0 and full.r2 >= 0.4)
+            ):
                 entry["verdict"] = "SUSPECT"
             else:
                 entry["verdict"] = "BOUNDED"

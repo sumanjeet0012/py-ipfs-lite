@@ -216,6 +216,35 @@ def test_connection_spike_on_latest_sample_does_not_reanchor() -> None:
     assert calm["state"] == spike["state"] == "BOUNDED"
 
 
+def test_tiny_absolute_swing_is_not_suspect() -> None:
+    """
+    A 15% move in a handful of channels is noise, not a suspicion.
+
+    Production flagged SUSPECT on six mplex channels that went 13→15 (median
+    thirds) while the endpoint moved by one. Percentages need an absolute floor.
+    """
+    watch = LeakWatch(peer=None)
+    for index in range(30):
+        live = 13 if index < 10 else (15 if index >= 20 else 14)
+        watch._samples.append(
+            Sample(
+                t=float(index * 4),
+                wall=1_700_000_000.0 + index * 4,
+                connections=400,
+                live={"mplex_streams": live},
+                work={"streams_opened": index * 200.0},
+                mem={"python_blocks": 1_300_000.0, "rss": 214_000_000.0},
+            )
+        )
+
+    report = watch.report()
+    entry = report["classes"]["mplex_streams"]
+    assert entry["per_connection_growth_fraction"] >= 0.05
+    assert entry["verdict"] == "BOUNDED"
+    assert report["suspect_classes"] == []
+    assert report["state"] == "BOUNDED"
+
+
 def test_orphan_age_is_a_zero_false_positive_test() -> None:
     """A wrappless stream older than any retention window is proof."""
     watch = _watch_with([(float(t), t * 50.0, 300) for t in range(0, 121, 4)])
